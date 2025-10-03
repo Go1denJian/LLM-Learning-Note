@@ -4,12 +4,10 @@
 
 Word2Vec 是 Google 团队在 2013 年提出的，用于学习单词向量表示的模型。核心论文有两篇：
 
-* **Efficient Estimation of Word Representations in Vector Space** (2013)
-* **Distributed Representations of Words and Phrases and their Compositionality** (2013)
+- [Efficient Estimation of Word Representations in Vector Space (Mikolov et al., 2013)](https://arxiv.org/abs/1301.3781)  
+- [Distributed Representations of Words and Phrases and their Compositionality (Mikolov et al., 2013)](https://arxiv.org/abs/1310.4546)  
 
-作者：Tomas Mikolov et al.
-
-Word2Vec 的核心思想是：通过预测词上下文或中心词，学习到词语在低维连续向量空间中的分布式表示。
+本文笔记基于以上两篇 Word2Vec 原始论文，结合数学表达和训练流程，整理 word embedding 的核心思想与实现方式。
 
 ---
 
