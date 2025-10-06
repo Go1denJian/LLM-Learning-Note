@@ -16,7 +16,7 @@ Word2Vec 是 Google 团队在 2013 年提出的，用于学习单词向量表示
 **目标**：将词语 $w \in V$（ $V$ 为词表）映射为一个 $d$ 维向量
 
 $$
-f: w \mapsto \mathbf{v}_w \in \mathbb{R}^d
+f: w \mapsto \vec{v}_w \in \mathbb{R}^d
 $$
 
 使得 **语义相近的词向量距离更近**。
@@ -48,7 +48,7 @@ $$
 
 **思路**：用上下文（context words）预测目标词（center word）。
 
-* **输入**：上下文词向量 ${w_{t-m}, ..., w_{t-1}, w_{t+1}, ..., w_{t+m}}$
+* **输入**：上下文词 ${w_{t-m}, ..., w_{t-1}, w_{t+1}, ..., w_{t+m}}$
 * **输出**：中心词 $w_t$
 
 #### 数学表达
@@ -57,19 +57,19 @@ $$
    对上下文单词做平均：
    
 $$
-   \mathbf{h} = \frac{1}{2m}\sum_{-m \leq j \leq m, j \neq 0} \mathbf{v}*{w*{t+j}}
+   \vec{h} = \frac{1}{2m}\sum_{-m \leq j \leq m, j \neq 0} \vec{v}*{w*{t+j}}
 $$
 
 3. **预测概率分布**（Softmax 层）：
 
 $$
-   P(w_t \mid context) = \frac{\exp(\mathbf{u}*{w_t}^\top \mathbf{h})}{\sum*{w \in V} \exp(\mathbf{u}_w^\top \mathbf{h})}
+   P(w_t \mid context) = \frac{\exp(\vec{u}*{w_t}^\top \vec{h})}{\sum*{w \in V} \exp(\vec{u}_w^\top \vec{h})}
 $$
 
 其中：
 
-* $\mathbf{v}_w \in \mathbb{R}^d$ 为输入嵌入
-* $\mathbf{u}_w \in \mathbb{R}^d$ 为输出嵌入
+* $\vec{v}_w \in \mathbb{R}^d$ 为输入嵌入
+* $\vec{u}_w \in \mathbb{R}^d$ 为输出嵌入
 
 3. **损失函数**：最大化正确词的概率
 
@@ -91,7 +91,7 @@ $$
 1. **预测概率分布**：
 
 $$
-   P(w_{t+j} \mid w_t) = \frac{\exp(\mathbf{u}*{w*{t+j}}^\top \mathbf{v}*{w_t})}{\sum*{w \in V} \exp(\mathbf{u}*w^\top \mathbf{v}*{w_t})}
+   P(w_{t+j} \mid w_t) = \frac{\exp(\vec{u}*{w*{t+j}}^\top \vec{v}*{w_t})}{\sum*{w \in V} \exp(\vec{u}*w^\top \vec{v}*{w_t})}
 $$
 
 2. **损失函数**：最大化上下文词的概率
@@ -102,7 +102,7 @@ $$
 
 ---
 
-## 4. 实际训练例子
+## 4. 例子
 
 ### 数据示例
 
@@ -124,25 +124,25 @@ $$
    假设词向量初始化：
    
 $$
-   v_{the} = (0.2, 0.1), \quad v_{sat} = (0.4, -0.1)
+   \vec{v}_{the} = (0.2, 0.1), \quad \vec{v}_{sat} = (0.4, -0.1)
 $$
 
 上下文平均：
 
 $$
-h = \frac{v_{the} + v_{sat}}{2} = (0.3, 0.0)
+\vec{h} = \frac{\vec{v}_{the} + \vec{v}_{sat}}{2} = (0.3, 0.0)
 $$
 
 2. **输出预测**（Softmax）：
 
 $$
-   P(w \mid h) = \frac{\exp(u_w^\top h)}{\sum_{w' \in V} \exp(u_{w'}^\top h)}
+   P(w \mid \vec{h}) = \frac{\exp(\vec{u_w}^\top \vec{h})}{\sum_{w' \in V} \exp(\vec{u_{w'}}^\top \vec{h})}
 $$
 
-若 $u_{cat}=(0.1,0.2)$，则
+若 $\vec{u}_{cat}=(0.1,0.2)$，则
 
 $$
-u_{cat}^\top h = 0.03
+\vec{u}_{cat}^\top \vec{h} = 0.03
 $$
 
 计算所有词的 softmax，得到预测分布。
@@ -155,9 +155,10 @@ $$
 $$
 
 4. **参数更新**：
-   对 $v_{the}, v_{sat}, u_{cat}$ 等做梯度下降。
+   对 $\vec{v}_{the}, \vec{v}_{sat}, \vec{u}_{cat}$ 等做梯度下降。
 
 ---
+
 
 ### 4.2 Skip-gram 例子
 
@@ -195,7 +196,7 @@ $$
 
 ## 6. 最终输出
 
-训练完成后，每个词 $w \in V$ 得到一个向量 $\mathbf{v}_w \in \mathbb{R}^d$。
+训练完成后，每个词 $w \in V$ 得到一个向量 $\vec{v}_w \in \mathbb{R}^d$。
 
 例如：
 
@@ -218,9 +219,10 @@ sat  -> [-0.09, 0.44, 0.15, ...]
 ### 背景
 
 在 Word2Vec 的 CBOW 或 Skip-gram 中，预测目标词时需要对整个词表 $V$ 做 **softmax**，计算代价很大：
-[
-P(w \mid h) = \frac{\exp(\mathbf{u}*w^\top h)}{\sum*{w' \in V} \exp(\mathbf{u}_{w'}^\top h)}
-]
+
+$$
+P(w \mid h) = \frac{\exp(\vec{u}*w^\top h)}{\sum*{w' \in V} \exp(\vec{u}_{w'}^\top h)}
+$$
 
 当词表规模达到百万级时，训练效率极低。
 
@@ -245,18 +247,18 @@ P(w \mid h) = \frac{\exp(\mathbf{u}*w^\top h)}{\sum*{w' \in V} \exp(\mathbf{u}_{
    采用 sigmoid 函数：
    
 $$
-   P(D=1 \mid w_c, w_o) = \sigma(\mathbf{u}*{w_o}^\top \mathbf{v}*{w_c}) = \frac{1}{1 + \exp(-\mathbf{u}*{w_o}^\top \mathbf{v}*{w_c})}
+   P(D=1 \mid w_c, w_o) = \sigma(\vec{u}*{w_o}^\top \vec{v}*{w_c}) = \frac{1}{1 + \exp(-\vec{u}*{w_o}^\top \vec{v}*{w_c})}
 $$
 
 * $w_c$：中心词
 * $w_o$：上下文词（或负样本词）
-* $\mathbf{v}, \mathbf{u}$：输入/输出嵌入向量
+* $\vec{v}, \vec{u}$：输入/输出嵌入向量
 
 2. **损失函数**
    Skip-gram with Negative Sampling (SGNS) 的损失函数：
 
 $$
-   \mathcal{L} = - \log \sigma(\mathbf{u}*{w_o}^\top \mathbf{v}*{w_c}) - \sum_{i=1}^k \log \sigma(-\mathbf{u}*{w_i}^\top \mathbf{v}*{w_c})
+   \mathcal{L} = - \log \sigma(\vec{u}*{w_o}^\top \vec{v}*{w_c}) - \sum_{i=1}^k \log \sigma(-\vec{u}*{w_i}^\top \vec{v}*{w_c})
 $$
 
 其中：
@@ -368,5 +370,3 @@ $$
 | Skip-gram + NS | 正样本 + $k$ 个负样本 | $\mathcal{L} = - \log \sigma(u_{w_o}^\top v_{w_c}) - \sum_{i=1}^k \log \sigma(-u_{w_i}^\top v_{w_c})$ | $O(k)$ | 
 
 ---
-
-
