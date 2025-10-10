@@ -24,15 +24,15 @@ $$
 一般而言，最为简单的做法是给每一个词单独设置一个维度，把 $V$ 映射到一个高维的向量空间，最终得到的表示是一个 $V$ 维的 one-hot 向量。  
 但是，这样的表示无法体现词与词之间的语义关系，同时计算过程中涉及到的矩阵规模是 $V \times V$，导致计算代价极高，并且矩阵大多是稀疏的。
 
-Word2Vec 的设计目标是将词映射到一个低维、稠密的向量空间（embedding space），其维度设为 $H$。  
+Word2Vec 的设计目标是将词映射到一个低维、稠密的向量空间（embedding space），其维度设为 $d$。  
 在这种情况下，输入层到隐藏层、隐藏层到输出层的计算复杂度可以近似写为：
 
 $$
-Q = H \times H + H \times V
+Q = d \times d + d \times V
 $$
 
-- $H \times H$ ：输入到隐藏层的计算复杂度  
-- $H \times V$ ：隐藏层到输出层的 softmax 计算复杂度  
+- $d \times d$ ：输入到隐藏层的计算复杂度  
+- $d \times V$ ：隐藏层到输出层的 softmax 计算复杂度  
 
 其中， $H \times V$ 的规模往往远大于 $H \times H$ ，成为训练的主要瓶颈。  
 例如，当 $H=300$， $V=100,000$ 时， $H \times H = 90,000$ ，而 $H \times V = 30,000,000$ 。可以看出，绝大部分计算开销来自输出层的 softmax。
@@ -100,101 +100,8 @@ $$
    \mathcal{L}*{SkipGram} = - \sum*{-m \leq j \leq m, j \neq 0} \log P(w_{t+j} \mid w_t)
 $$
 
----
 
-## 4. 例子
-
-### 数据示例
-
-语料：`the cat sat on the mat`
-词表 $V = {\text{the, cat, sat, on, mat}}$
-
-设窗口大小 $m=2$，词向量维度 $d=2$（方便展示）。
-
----
-
-### 4.1 CBOW 例子
-
-句子片段：`the cat sat`
-
-* **上下文**：`the, sat`
-* **目标词**：`cat`
-
-1. **输入**：
-   假设词向量初始化：
-   
-$$
-   \vec{v}_{the} = (0.2, 0.1), \quad \vec{v}_{sat} = (0.4, -0.1)
-$$
-
-上下文平均：
-
-$$
-\vec{h} = \frac{\vec{v}_{the} + \vec{v}_{sat}}{2} = (0.3, 0.0)
-$$
-
-2. **输出预测**（Softmax）：
-
-$$
-   P(w \mid \vec{h}) = \frac{\exp(\vec{u_w}^\top \vec{h})}{\sum_{w' \in V} \exp(\vec{u_{w'}}^\top \vec{h})}
-$$
-
-若 $\vec{u}_{cat}=(0.1,0.2)$，则
-
-$$
-\vec{u}_{cat}^\top \vec{h} = 0.03
-$$
-
-计算所有词的 softmax，得到预测分布。
-
-3. **损失函数**：
-   目标词是 "cat"，损失：
-   
-$$
-   \mathcal{L} = -\log P(\text{cat} \mid the,sat)
-$$
-
-4. **参数更新**：
-   对 $\vec{v}_{the}, \vec{v}_{sat}, \vec{u}_{cat}$ 等做梯度下降。
-
----
-
-
-### 4.2 Skip-gram 例子
-
-句子片段：`the cat sat`
-
-* **中心词**：`cat`
-* **上下文**：`the, sat`
-
-1. **输入**：
-   假设 $v_{cat} = (0.5,0.2)$
-
-2. **预测上下文词**：
-
-$$
-   P(the \mid cat) = \frac{\exp(u_{the}^\top v_{cat})}{\sum_{w \in V}\exp(u_w^\top v_{cat})}
-$$
-
-3. **损失函数**：
-
-$$
-   \mathcal{L} = - \big( \log P(the \mid cat) + \log P(sat \mid cat) \big)
-$$
-
-4. **参数更新**：
-   调整 $v_{cat}$ 与对应的 $u_{the}, u_{sat}$。
-
----
-
-## 5. 训练加速技巧
-
-* **Negative Sampling**：不对整个词表做 softmax，而是对正样本 + 若干负样本做二分类。
-* **Hierarchical Softmax**：使用霍夫曼树加速 softmax 计算。
-
----
-
-## 6. 最终输出
+## 4. 最终输出
 
 训练完成后，每个词 $w \in V$ 得到一个向量 $\vec{v}_w \in \mathbb{R}^d$。
 
@@ -214,7 +121,7 @@ sat  -> [-0.09, 0.44, 0.15, ...]
 ---
 
 
-## 8. Negative Sampling （负采样）
+## 5. Negative Sampling （负采样）
 
 ### 背景
 
@@ -230,7 +137,7 @@ $$
 
 ---
 
-### 8.1 思想
+### 5.1 思想
 
 对于一个正样本对 $(w_t, w_{context})$，目标是区分它和若干负样本 $(w_t, w_{neg})$。
 
@@ -241,7 +148,7 @@ $$
 
 ---
 
-### 8.2 数学公式
+### 5.2 数学公式
 
 1. **二分类预测函数**
    采用 sigmoid 函数：
@@ -273,7 +180,7 @@ $$
 
 ---
 
-### 8.3 训练例子
+### 5.3 训练例子
 
 语料：`the cat sat on the mat`
 窗口大小 $m=1$
@@ -348,7 +255,7 @@ $$
 
 ---
 
-### 8.4 总结
+### 5.4 总结
 
 * **优势**：
 
@@ -361,7 +268,7 @@ $$
 
 ---
 
-## Word2Vec 三种训练方式对比
+## 9.Word2Vec 三种训练方式对比
 
 | 方法             | 输出目标           | 损失函数形式                                                                                                | 复杂度  | 
 | -------------- | -------------- | ----------------------------------------------------------------------------------------------------- | ------ |
@@ -370,3 +277,174 @@ $$
 | Skip-gram + NS | 正样本 + $k$ 个负样本 | $\mathcal{L} = - \log \sigma(u_{w_o}^\top v_{w_c}) - \sum_{i=1}^k \log \sigma(-u_{w_i}^\top v_{w_c})$ | $O(k)$ | 
 
 ---
+
+
+## 10.附录：CBOW 模型：损失函数与梯度更新公式推导
+
+### 10.1 模型设定
+
+* 词表大小： $V$ 
+* 向量维度： $N$ 
+* 输入（上下文词）： $w_1, w_2, \dots, w_C$ 
+* 输出（目标词）： $w_o$ 
+
+模型使用两套嵌入矩阵：
+
+| 符号                 | 说明              | 维度             |
+| ------------------ | --------------- | -------------- |
+| $V_{\text{in}}$  | 输入嵌入矩阵（用于上下文词）  | $N \times V$ |
+| $V_{\text{out}}$ | 输出嵌入矩阵（用于预测目标词） | $N \times V$ |
+
+---
+
+### 10.2 前向传播（Forward）
+
+对上下文中每个词 ( w_i )，取其输入向量：
+$$
+\mathbf{v}*{w_i} = V*{\text{in}}[:, w_i]
+$$
+
+求它们的平均，得到隐藏层表示：
+$$
+\mathbf{h} = \frac{1}{C} \sum_{i=1}^C \mathbf{v}_{w_i}
+$$
+
+计算每个词的预测得分（logit）：
+$$
+z_j = \mathbf{u}_j^\top \mathbf{h}, \quad \text{其中 } \mathbf{u}*j = V*{\text{out}}[:, j]
+$$
+
+计算 softmax 概率：
+$$
+\hat{y}*j = \frac{\exp(z_j)}{\sum*{k=1}^V \exp(z_k)}
+$$
+
+---
+
+### 10.3 损失函数（单样本）
+
+CBOW 的目标是最大化预测正确中心词 ( w_o ) 的概率，对应的负对数似然为：
+$$
+\mathcal{L} = -\log P(w_o|\text{context})
+= -\mathbf{u}_{w_o}^\top \mathbf{h}
+
+* \log\sum_{j=1}^V \exp(\mathbf{u}_j^\top \mathbf{h})
+  $$
+
+---
+
+### 10.4 梯度求导
+
+#### （1）对输出向量 ( \mathbf{u}_j ) 的梯度：
+
+softmax 输出：
+$$
+\hat{y}_j = \frac{\exp(\mathbf{u}_j^\top \mathbf{h})}{\sum_k \exp(\mathbf{u}_k^\top \mathbf{h})}
+$$
+
+one-hot 目标：
+$$
+y_j =
+\begin{cases}
+1, & j = w_o \
+0, & \text{otherwise}
+\end{cases}
+$$
+
+因此：
+$$
+\frac{\partial \mathcal{L}}{\partial \mathbf{u}_j}
+= (\hat{y}_j - y_j),\mathbf{h}
+$$
+
+**矩阵形式：**
+$$
+\frac{\partial \mathcal{L}}{\partial V_{\text{out}}}
+= \mathbf{h},(\hat{\mathbf{y}} - \mathbf{y})^\top
+$$
+
+---
+
+#### （2）对隐藏层 ( \mathbf{h} ) 的梯度：
+
+$$
+\frac{\partial \mathcal{L}}{\partial \mathbf{h}}
+= \sum_{j=1}^V (\hat{y}_j - y_j),\mathbf{u}*j
+= V*{\text{out}},(\hat{\mathbf{y}} - \mathbf{y})
+$$
+
+---
+
+#### （3）对输入向量 ( \mathbf{v}_{w_i} ) 的梯度：
+
+因为
+$$
+\mathbf{h} = \frac{1}{C} \sum_{i=1}^C \mathbf{v}*{w_i}
+$$
+所以：
+$$
+\frac{\partial \mathcal{L}}{\partial \mathbf{v}*{w_i}}
+= \frac{1}{C} \frac{\partial \mathcal{L}}{\partial \mathbf{h}}
+= \frac{1}{C} \sum_{j=1}^V (\hat{y}_j - y_j),\mathbf{u}_j
+$$
+
+**矩阵形式：**
+$$
+\frac{\partial \mathcal{L}}{\partial V_{\text{in}}[:, w_i]}
+= \frac{1}{C},V_{\text{out}},(\hat{\mathbf{y}} - \mathbf{y})
+$$
+
+---
+
+### 10.5 参数更新（梯度下降）
+
+使用学习率 ( \eta )，按标准 SGD 更新：
+
+#### （a）更新输出矩阵：
+
+$$
+V_{\text{out}}[:, j]
+\leftarrow
+V_{\text{out}}[:, j] - \eta,(\hat{y}_j - y_j),\mathbf{h}
+$$
+
+#### （b）更新输入矩阵（上下文词）：
+
+$$
+V_{\text{in}}[:, w_i]
+\leftarrow
+V_{\text{in}}[:, w_i] -
+\eta \cdot \frac{1}{C} \sum_{j=1}^V (\hat{y}_j - y_j),\mathbf{u}_j
+$$
+
+在实现时：
+
+* 对 softmax 版本，( \sum_j ) 是全词表求和；
+* 对 **负采样** 或 **层次 softmax**，这一步会替换为更小范围的求和。
+
+---
+
+### 10.6梯度方向解释
+
+* 输出层梯度 ((\hat{y}_j - y_j)\mathbf{h})：
+  使目标词 ( w_o ) 的概率增大，非目标词的概率降低。
+
+* 输入层梯度：
+  把上下文向量朝着能更好预测目标词的方向调整。
+
+这使得**相似上下文中的词共享相似的隐藏向量方向**。
+
+---
+
+ ### 10.最终总结表
+
+| 项目    | 符号                                                         | 表达式                                                                               | 含义            |
+| ----- | ---------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------- |
+| 损失函数  | ( \mathcal{L} )                                            | (-\mathbf{u}_{w_o}^\top \mathbf{h} + \log\sum_j e^{\mathbf{u}_j^\top \mathbf{h}}) | softmax 负对数似然 |
+| 输出层梯度 | ( \frac{\partial \mathcal{L}}{\partial \mathbf{u}_j} )     | ((\hat{y}_j - y_j)\mathbf{h})                                                     | 每个词的输出向量更新方向  |
+| 隐层梯度  | ( \frac{\partial \mathcal{L}}{\partial \mathbf{h}} )       | ( \sum_j (\hat{y}_j - y_j)\mathbf{u}_j )                                          | 用于反传给输入层      |
+| 输入层梯度 | ( \frac{\partial \mathcal{L}}{\partial \mathbf{v}_{w_i}} ) | ( \frac{1}{C}\sum_j (\hat{y}_j - y_j)\mathbf{u}_j )                               | 平均分配给每个上下文词   |
+| 更新规则  |                                                            | ( \theta \leftarrow \theta - \eta\nabla_\theta \mathcal{L} )                      | 标准 SGD        |
+
+---
+
