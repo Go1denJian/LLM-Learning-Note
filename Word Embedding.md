@@ -78,6 +78,7 @@ $$
 \mathcal{L}_{CBOW} &= -\log P(w_t \mid  w_{t+j}, -m \leq j \leq m, j \neq 0 ) \\
    &= -\mathbf{u}_{w_t}^\top \mathbf{h} + \log(\sum_{w \in V} \exp(\mathbf{u}_w^\top \mathbf{h}))
 \end{aligned} \end{equation}
+   
 $$
 
 ---
@@ -104,13 +105,13 @@ $$
 $$
 
 
-> Skip-gram损失函数的推导说明
+> [!NOTE] Skip-gram损失函数的推导说明
 > 需要说明的是，这里做了一个很重要的假设，即在已知 $w_t$的条件下，$w_i,w_j，i \neq j$的预测是互相独立的，这是建模分析中的一个近似。z这样我们就把问题从预测一个上下文（句子）转化为预测每个位置的词，从而概率写成乘积的形式，即：
 > $$
-\begin{equation} \begin{aligned}
+> \begin{equation} \begin{aligned}
   P(w_{t+j}, -m \leq j \leq m, j \neq 0 \mid w_t) \approx \prod_{-m \leq j \leq m, j \neq 0}P(w_{t+j}|w_t)
 \end{aligned} \end{equation}
-$$
+> $$
 > 
 
 ## 4. 最终输出
