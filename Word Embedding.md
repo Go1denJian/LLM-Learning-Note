@@ -78,7 +78,6 @@ $$
 \mathcal{L}_{CBOW} &= -\log P(w_t \mid  w_{t+j}, -m \leq j \leq m, j \neq 0 ) \\
    &= -\mathbf{u}_{w_t}^\top \mathbf{h} + \log(\sum_{w \in V} \exp(\mathbf{u}_w^\top \mathbf{h}))
 \end{aligned} \end{equation}
-   
 $$
 
 ---
@@ -105,13 +104,13 @@ $$
 $$
 
 
-> [!NOTE] Skip-gram损失函数的推导说明
+> Skip-gram损失函数的推导说明
 > 需要说明的是，这里做了一个很重要的假设，即在已知 $w_t$的条件下，$w_i,w_j，i \neq j$的预测是互相独立的，这是建模分析中的一个近似。z这样我们就把问题从预测一个上下文（句子）转化为预测每个位置的词，从而概率写成乘积的形式，即：
 > $$
-> \begin{equation} \begin{aligned}
+ \begin{equation} \begin{aligned}
   P(w_{t+j}, -m \leq j \leq m, j \neq 0 \mid w_t) \approx \prod_{-m \leq j \leq m, j \neq 0}P(w_{t+j}|w_t)
 \end{aligned} \end{equation}
-> $$
+$$
 > 
 
 ## 4. 最终输出
@@ -161,7 +160,7 @@ $$
 * $w_o$：上下文词（或负样本词）
 * $\mathbf{u}, \mathbf{v}$：输入/输出嵌入向量
 
-> [!NOTE] Sigmoid函数
+> Sigmoid函数
 > 这里使用Sigmoid函数是一个常用手法，即我们需要构造一个这样的映射：
 > $$
 \begin{equation} \begin{aligned}
@@ -186,7 +185,7 @@ $$
 目标是 第一个项：最大化正样本的相似度 与 第二个项：最小化负样本的相似度
 
 
-> [!NOTE] Skip-gram with Negative Sampling (SGNS) 的损失函数
+> Skip-gram with Negative Sampling (SGNS) 的损失函数
 > 这里的损失函数构造实际上使用了sigmoid函数的特性：$\sigma(-x) = 1-\sigma(x)$
 
 
@@ -259,13 +258,13 @@ $$
 
 ### 7.3 损失函数（单样本）
 
-CBOW 的目标是最大化预测正确中心词 ( $w_o$ ) 的概率，对应的负对数似然为（对于该函数需要最小化，以达到概率最大化的目的）：
+CBOW 的目标是最大化预测正确中心词 ( $w_o$ ) 的概率，对应的负对数似然为（对于该函数需要最小化，以达到概率最大化的目的）: 
+
+
 $$
 \mathcal{L} = -\log P(w_o|\text{context})
-= -\mathbf{u}_{w_o}^\top \mathbf{h}
-
-+ \log\sum_{w_j \in V} \exp(\mathbf{u}_j^\top \mathbf{h})
-  $$
+= -\mathbf{u}_{w_o}^\top \mathbf{h} + \log\sum_{w_j \in V} \exp(\mathbf{u}_j^\top \mathbf{h})
+$$
 
 ---
 
@@ -313,7 +312,6 @@ $$
 &= \sum_{j=1}^{|V|} (\hat{y}_j - y_j)\mathbf{u}_j \\
 &= V_{\text{out}}(\hat{\mathbf{y}} - \mathbf{y})
 \end{aligned} \end{equation}
-
 $$
 
 ---
