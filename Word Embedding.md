@@ -391,20 +391,81 @@ $$
 
 ## 8.共现矩阵
 
-### 8.1 共现矩阵 X（PMI / PPMI） 
+本章节从另一个角度来解释SGN，并给出另一个数学的表达方式，这个公式的推导并非严谨，带有很多形式计算和隐含的假设，仅作补充参考（主要用于简化计算）。
 
-定义
+
+定义(注意这里实际上有隐藏参数$m$，即词窗的大小)
 $$
 X_{ij}=	\text{词 i 与词 j 在窗口中共现的次数}
 $$
 
-PMI：
+$PMI$：
 $$
-PMI(i,j)=\log \frac{P(i,j)}{P(i)P(j)}
+PMI_m(i,j)=\log \frac{P(i,j)}{P(i)P(j)}
 $$
 
-PPMI：
+$PPMI$：
 
 $$
-PPMI(i,j)=\max(PMI(i,j),0)
+PPMI_m(i,j)=\max(PMI_m(i,j),0)
 $$
+许多传统方法（如 SVD / GloVe）直接基于该矩阵构建词向量。
+
+
+从二分类视角看，Skip-gram with Negative Sampling（SGNS）可以被理解为在训练一个 **逻辑回归分类器**，  
+使用词向量点积 $\mathbf{v}_w^\top \mathbf{u}_c$ 来区分：
+
+- **真实共现对** $(w,c)$（来自语料）
+- **噪声采样对** $(w,c)$（来自负采样分布）
+
+模型的判别概率为：
+
+$$
+P(D=1 \mid w,c) = \sigma(\mathbf{v}_w^\top \mathbf{u}_c)
+$$
+
+在最优解处（Bayes 最优分类器），有：
+
+$$
+\sigma(\mathbf{v}_w^\top \mathbf{u}_c)
+=
+\frac{P_{data}(w,c)}{P_{data}(w,c) + k \, P_{noise}(w,c)}
+$$
+
+其中：
+
+- $P_{data}(w,c)$ 表示真实语料中词–上下文对的经验联合分布  
+- $P_{noise}(w,c)$ 表示负采样所使用的噪声分布  
+- $k$ 为每个正样本对应的负采样数量  
+
+假设噪声分布满足独立性假设：
+
+$$
+P_{noise}(w,c) = P(w) P(c)
+$$
+
+则可以解得最优点积满足：
+
+$$
+\mathbf{v}_w^\top \mathbf{u}_c
+\approx
+\log \frac{P(w,c)}{P(w)P(c)} - \log k
+$$
+
+其中：
+
+$$
+PMI(w,c) = \log \frac{P(w,c)}{P(w)P(c)}
+$$
+
+因此，有近似关系：
+
+$$
+\mathbf{v}_w^\top \mathbf{u}_c \approx PMI(w,c) - \log k
+$$
+
+这表明 Skip-gram with Negative Sampling（SGNS）在数学上等价于  
+**对 PMI 矩阵（减去常数项 $\log k$）进行低秩近似分解**。
+
+进一步地，由于在实际训练过程中，PMI 为负的词对几乎不会得到显著的梯度更新，  
+SGNS 在效果上更接近于对 **PPMI（Positive PMI）矩阵** 的低秩分解。
