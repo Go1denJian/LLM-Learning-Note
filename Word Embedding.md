@@ -60,7 +60,7 @@ $$
    \mathbf{h} = \frac{1}{2m}\sum_{-m \leq j \leq m, j \neq 0} \mathbf{v}_{w_{t+j}}
 $$
 
-1. **目标词预测概率分布**（Softmax 层）：
+2. **目标词预测概率分布**（Softmax 层）：
 
 $$
    P(w_t \mid w_{t+j}, -m \leq j \leq m, j \neq 0 ) = \frac{\exp(\mathbf{u}_{w_t}^\top \mathbf{h})}{\sum_{w \in V} \exp(\mathbf{u}_w^\top \mathbf{h})}
@@ -389,7 +389,25 @@ $$
 
 ---
 
-## 8.共现矩阵
+### 8.负采样更新的梯度参数
+
+
+注意这里的正负样本是分开的：
+正样本：
+$$
+\frac{\text{d} \mathcal{L}_{pos}}{\text{d} x} = \sigma(x)-1
+$$
+负样本：
+$$
+\frac{\text{d} \mathcal{L}_{neg}}{\text{d} x} = \sigma(x)
+$$
+
+> [!NOTE] $\sigma (x)$的导数
+> $$\frac{\text{d}}{\text{d}x}\sigma (x) = $\sigma (x)(\sigma (x)-1)$$
+
+
+---
+## 9.共现矩阵
 
 本章节从另一个角度来解释SGN，并给出另一个数学的表达方式，这个公式的推导并非严谨，带有很多形式计算和隐含的假设，仅作补充参考（主要用于简化计算）。
 
