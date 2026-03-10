@@ -29,18 +29,18 @@ from word2vec import (
 
 
 # ============================================================================
-# 1. 示例语料
+# 1. Sample Corpus
 # ============================================================================
 
 def get_sample_corpus():
     """
-    获取示例语料
+    Get sample corpus
     
     实际使用时可以替换为：
     - text8: http://mattmahoney.net/dc/text8.zip
     - wikitext: https://blog.salesforceairesearch.com/the-wikitext-long-term-dependency-language-modeling-dataset/
     """
-    # 示例语料（关于猫和狗的句子）
+    # Sample corpus (sentences about cats and dogs)
     sentences = [
         ['the', 'cat', 'sat', 'on', 'the', 'mat'],
         ['the', 'dog', 'sat', 'on', 'the', 'log'],
@@ -62,55 +62,55 @@ def get_sample_corpus():
         ['the', 'log', 'was', 'hard', 'and', 'rough'],
         ['cats', 'have', 'whiskers', 'and', 'claws'],
         ['dogs', 'have', 'tails', 'and', 'floppy', 'ears'],
-    ] * 500  # 重复增加词频
+    ] * 500  # Repeat to increase word frequency
     
     return sentences
 
 
 # ============================================================================
-# 2. 训练配置
+# 2. Training Configuration
 # ============================================================================
 
 CONFIG = {
-    # 数据配置
-    'min_freq': 10,          # 最小词频
-    'window_size': 2,        # 上下文窗口
+    # Data configuration
+    'min_freq': 10,          # Minimum word frequency
+    'window_size': 2,        # Context window size
     
-    # 模型配置
-    'embedding_dim': 100,    # 词向量维度
-    'num_negatives': 5,      # 负样本数量
+    # Model configuration
+    'embedding_dim': 100,    # Embedding dimension
+    'num_negatives': 5,      # Number of negative samples
     
-    # 训练配置
+    # Training configuration
     'batch_size': 64,
     'num_epochs': 20,
     'learning_rate': 0.001,
     
-    # 设备
-    'device': 'cpu',  # 如果有 GPU 改为 'cuda'
+    # Device
+    'device': 'cpu',  # Change to 'cuda' if GPU available
 }
 
 
 # ============================================================================
-# 3. 主训练流程
+# 3. Main Training Pipeline
 # ============================================================================
 
 def main():
     print("=" * 60)
-    print("Word2Vec 训练示例")
+    print("Word2Vec Training Example")
     print("=" * 60)
     
-    # 1. 准备数据
-    print("\n[1/5] 准备数据...")
+    # 1. Prepare data
+    print("\n[1/5] Prepare data...")
     sentences = get_sample_corpus()
-    print(f"句子数量：{len(sentences)}")
+    print(f"Number of sentences：{len(sentences)}")
     
-    # 2. 构建词表
-    print("\n[2/5] 构建词表...")
+    # 2. Build vocabulary
+    print("\n[2/5] Build vocabulary...")
     vocab = Vocabulary(min_freq=CONFIG['min_freq'])
     vocab.build(sentences)
     
-    # 3. 生成训练样本
-    print("\n[3/5] 生成训练样本...")
+    # 3. Generate training samples
+    print("\n[3/5] Generate training samples...")
     pairs = generate_skipgram_pairs(
         sentences,
         vocab,
@@ -126,7 +126,7 @@ def main():
     print(f"模型参数量：{sum(p.numel() for p in model.parameters()):,}")
     
     # 5. 训练
-    print("\n[5/5] 开始训练...")
+    print("\n[5/5] Start training...")
     model, losses = train_word2vec_skipgram(
         model=model,
         pairs=pairs,
@@ -143,19 +143,19 @@ def main():
     print("可视化结果")
     print("=" * 60)
     
-    # 绘制训练损失
+    # Plot training loss
     plot_training_loss(losses)
     
-    # 可视化词向量
+    # Visualize word embeddings
     words_to_visualize = [
         'cat', 'cats', 'kitten', 'dog', 'dogs', 'puppy',
         'mat', 'log', 'sat', 'chased', 'friends', 'pets'
     ]
     visualize_embeddings(model, vocab, words_to_visualize, method='pca')
     
-    # 7. 词相似度查询
+    # 7. Word similarity query
     print("\n" + "=" * 60)
-    print("词相似度查询")
+    print("Word similarity query")
     print("=" * 60)
     
     query_words = ['cat', 'dog', 'sat', 'mat']
@@ -164,11 +164,11 @@ def main():
     
     # 8. 词向量类比
     print("\n" + "=" * 60)
-    print("词向量类比推理")
+    print("Word vector analogy reasoning")
     print("=" * 60)
     
-    # 经典示例：king - man + woman ≈ queen
-    # 这里用猫狗示例：cat - kitten + puppy ≈ dog
+    # Classic example：king - man + woman ≈ queen
+    # Cat-dog example：cat - kitten + puppy ≈ dog
     if all(w in vocab for w in ['cat', 'kitten', 'puppy', 'dog']):
         word_analogy(model, vocab, 'cat', 'kitten', 'puppy', top_k=5)
     
@@ -186,7 +186,7 @@ def main():
     print("模型已保存：word2vec_model.pt")
     
     print("\n" + "=" * 60)
-    print("训练完成！")
+    print("Training complete！")
     print("=" * 60)
 
 
