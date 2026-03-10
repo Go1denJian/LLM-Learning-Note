@@ -1,13 +1,13 @@
 """
-Word2Vec 完整训练示例
+Word2Vec Complete Training Example
 
-使用示例语料训练 Word2Vec 模型，并可视化结果。
+Train Word2Vec model with sample corpus and visualize results.
 
-用法:
-    python example_train_word2vec.py
+Usage:
+    python examples/train_word2vec.py
 
-作者：OpenClaw Engineer
-日期：2026-03-11
+Author: OpenClaw Engineer
+Date: 2026-03-11
 """
 
 import torch

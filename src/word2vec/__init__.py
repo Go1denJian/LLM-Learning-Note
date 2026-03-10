@@ -1,15 +1,16 @@
 """
-Word Embedding 数学原理与实现 —— 从共现矩阵到词向量
+Word Embedding: Mathematical Principles and Implementation
 
-配套代码实现，包含：
-1. Vocabulary 词表管理
-2. NegativeSampler 负采样器
-3. Word2Vec Skip-gram 模型
-4. 训练循环
-5. 可视化与相似度计算
+Implementation code for Word2Vec, containing:
+1. Vocabulary: vocabulary management
+2. NegativeSampler: negative sampling
+3. Word2Vec Skip-gram model
+4. Word2Vec CBOW model
+5. Training functions
+6. Visualization and similarity computation
 
-作者：OpenClaw Engineer (AI + Mathematics Professor)
-日期：2026-03-11
+Author: OpenClaw Engineer (AI + Mathematics Professor)
+Date: 2026-03-11
 """
 
 import numpy as np
@@ -30,12 +31,12 @@ import matplotlib.pyplot as plt
 
 class Vocabulary:
     """
-    词表管理类
+    Vocabulary management class
     
-    功能:
-        - 构建词表（过滤低频词）
-        - word <-> idx 映射
-        - 词频统计
+    Features:
+        - Build vocabulary (filter low-frequency words)
+        - word <-> idx mapping
+        - Word frequency statistics
     """
     def __init__(self, min_freq: int = 5):
         self.word2idx: Dict[str, int] = {}
@@ -45,27 +46,27 @@ class Vocabulary:
     
     def build(self, sentences: List[List[str]]):
         """
-        构建词表
+        Build vocabulary
         
-        参数:
-            sentences: 分词后的句子列表 [[word1, word2, ...], ...]
+        Args:
+            sentences: Tokenized sentences [[word1, word2, ...], ...]
         """
-        print("构建词表...")
+        print("Building vocabulary...")
         
-        # 统计词频
+        # Count word frequencies
         for sentence in sentences:
             self.word_freq.update(sentence)
         
-        # 过滤低频词
+        # Filter low-frequency words
         words = [w for w, f in self.word_freq.items() if f >= self.min_freq]
         
-        # 构建映射
+        # Build mapping
         for idx, word in enumerate(words):
             self.word2idx[word] = idx
             self.idx2word[idx] = word
         
-        print(f"词表大小：{len(self):,} (原始：{len(self.word_freq):,})")
-        print(f"过滤掉的词：{len(self.word_freq) - len(self):,}")
+        print(f"Vocabulary size: {len(self):,} (original: {len(self.word_freq):,})")
+        print(f"Filtered words: {len(self.word_freq) - len(self):,}")
     
     def __len__(self):
         return len(self.word2idx)
@@ -84,25 +85,25 @@ def generate_skipgram_pairs(
     window_size: int = 2
 ) -> List[Tuple[int, int]]:
     """
-    生成 Skip-gram 训练样本
+    Generate Skip-gram training samples
     
-    参数:
-        sentences: 分词后的句子列表
-        vocab: 词表
-        window_size: 上下文窗口大小
+    Args:
+        sentences: Tokenized sentences
+        vocab: Vocabulary
+        window_size: Context window size
     
-    返回:
-        pairs: (center_word, context_word) 索引对列表
+    Returns:
+        pairs: List of (center_word, context_word) index pairs
     """
     pairs = []
     
     for sentence in sentences:
-        # 转换为索引（过滤不在词表中的词）
+        # Convert to indices (filter words not in vocabulary)
         indices = [vocab.word2idx[w] for w in sentence if w in vocab.word2idx]
         
-        # 生成 (center, context) 对
+        # Generate (center, context) pairs
         for i, center_idx in enumerate(indices):
-            # 上下文范围
+            # Context range
             start = max(0, i - window_size)
             end = min(len(indices), i + window_size + 1)
             
@@ -111,7 +112,7 @@ def generate_skipgram_pairs(
                     context_idx = indices[j]
                     pairs.append((center_idx, context_idx))
     
-    print(f"生成训练样本：{len(pairs):,} 对")
+    print(f"Generated training samples: {len(pairs):,} pairs")
     return pairs
 
 
@@ -121,15 +122,15 @@ def generate_cbow_pairs(
     window_size: int = 2
 ) -> List[Tuple[List[int], int]]:
     """
-    生成 CBOW 训练样本
+    Generate CBOW training samples
     
-    参数:
-        sentences: 分词后的句子列表
-        vocab: 词表
-        window_size: 上下文窗口大小
+    Args:
+        sentences: Tokenized sentences
+        vocab: Vocabulary
+        window_size: Context window size
     
-    返回:
-        pairs: ([context_words], target_word) 列表
+    Returns:
+        pairs: List of ([context_words], target_word)
     """
     pairs = []
     
@@ -137,7 +138,7 @@ def generate_cbow_pairs(
         indices = [vocab.word2idx[w] for w in sentence if w in vocab.word2idx]
         
         for i in range(len(indices)):
-            # 上下文
+            # Context
             context = []
             for j in range(max(0, i - window_size), min(len(indices), i + window_size + 1)):
                 if i != j:
@@ -146,7 +147,7 @@ def generate_cbow_pairs(
             if context:
                 pairs.append((context, indices[i]))
     
-    print(f"生成 CBOW 训练样本：{len(pairs):,} 对")
+    print(f"Generated CBOW training samples: {len(pairs):,} pairs")
     return pairs
 
 
@@ -156,25 +157,25 @@ def generate_cbow_pairs(
 
 class NegativeSampler:
     """
-    负采样器
+    Negative sampler
     
-    使用幂律分布 P(w) = f(w)^power / sum(f(w)^power)
+    Uses power law distribution P(w) = f(w)^power / sum(f(w)^power)
     """
     def __init__(self, vocab: Vocabulary, power: float = 0.75):
         self.vocab = vocab
         self.power = power
         
-        # 计算采样分布
+        # Compute sampling distribution
         freqs = np.array([vocab.word_freq[w] ** power for w in vocab.word2idx])
         self.probs = freqs / freqs.sum()
         
-        # 预采样池（优化性能）
-        self.table_size = 100000000  # 1 亿
+        # Pre-sampled table (optimization)
+        self.table_size = 100000000  # 100M
         self.table = np.zeros(self.table_size, dtype=np.int64)
         self._build_table()
     
     def _build_table(self):
-        """构建采样表（别名方法优化）"""
+        """Build sampling table (alias method optimization)"""
         idx = 0
         for word_idx, prob in enumerate(self.probs):
             count = int(prob * self.table_size)
@@ -183,18 +184,18 @@ class NegativeSampler:
     
     def sample(self, num_samples: int, exclude: Optional[int] = None) -> List[int]:
         """
-        采样负样本
+        Sample negative samples
         
-        参数:
-            num_samples: 采样数量
-            exclude: 排除的词索引
+        Args:
+            num_samples: Number of samples
+            exclude: Word index to exclude
         
-        返回:
-            negative_indices: 负样本索引列表
+        Returns:
+            negative_indices: List of negative sample indices
         """
         samples = []
         while len(samples) < num_samples:
-            # 从预采样表中随机选择
+            # Randomly select from pre-sampled table
             idx = np.random.randint(self.table_size)
             word_idx = self.table[idx]
             
@@ -212,24 +213,24 @@ class Word2VecSkipGram(nn.Module):
     """
     Skip-gram with Negative Sampling
     
-    数学公式:
+    Mathematical formula:
         L = -log σ(u_wo^T v_wc) - sum_{i=1}^k log σ(-u_wi^T v_wc)
     
-    参数:
-        vocab_size: 词表大小
-        embedding_dim: 嵌入维度（默认 300）
+    Args:
+        vocab_size: Vocabulary size
+        embedding_dim: Embedding dimension (default 300)
     """
     def __init__(self, vocab_size: int, embedding_dim: int = 300):
         super().__init__()
         self.vocab_size = vocab_size
         self.embedding_dim = embedding_dim
         
-        # 输入词向量 W_in
+        # Input word vectors W_in
         self.W_in = nn.Embedding(vocab_size, embedding_dim)
-        # 输出词向量 W_out
+        # Output word vectors W_out
         self.W_out = nn.Embedding(vocab_size, embedding_dim)
         
-        # Xavier 初始化
+        # Xavier initialization
         nn.init.xavier_uniform_(self.W_in.weight)
         nn.init.xavier_uniform_(self.W_out.weight)
     
@@ -240,28 +241,28 @@ class Word2VecSkipGram(nn.Module):
         negative_words: torch.Tensor      # (batch_size, num_negatives)
     ) -> torch.Tensor:
         """
-        前向传播计算损失
+        Forward pass to compute loss
         
-        返回:
-            loss: 标量损失
+        Returns:
+            loss: Scalar loss
         """
         batch_size = center_words.size(0)
         num_negatives = negative_words.size(1)
         
-        # 1. 获取词向量
+        # 1. Get word vectors
         v_c = self.W_in(center_words)           # (batch, dim)
         u_o = self.W_out(context_words)         # (batch, dim)
         u_neg = self.W_out(negative_words)      # (batch, num_neg, dim)
         
-        # 2. 正样本得分：u_o^T v_c
+        # 2. Positive sample score: u_o^T v_c
         pos_score = torch.sum(u_o * v_c, dim=1)  # (batch,)
         pos_loss = -F.logsigmoid(pos_score)      # -log σ(u_o^T v_c)
         
-        # 3. 负样本得分：u_neg^T v_c
+        # 3. Negative sample score: u_neg^T v_c
         neg_score = torch.bmm(u_neg, v_c.unsqueeze(2)).squeeze(2)  # (batch, num_neg)
         neg_loss = -F.logsigmoid(-neg_score).sum(dim=1)  # -sum log σ(-u_neg^T v_c)
         
-        # 4. 总损失
+        # 4. Total loss
         loss = pos_loss + neg_loss
         
         return loss.mean()
@@ -271,7 +272,7 @@ class Word2VecCBOW(nn.Module):
     """
     CBOW with Negative Sampling
     
-    数学公式:
+    Mathematical formula:
         h = (1/C) * sum(v_context)
         L = -log σ(u_target^T h) - sum_{i=1}^k log σ(-u_neg_i^T h)
     """
@@ -280,12 +281,12 @@ class Word2VecCBOW(nn.Module):
         self.vocab_size = vocab_size
         self.embedding_dim = embedding_dim
         
-        # 输入词向量 W_in
+        # Input word vectors W_in
         self.W_in = nn.Embedding(vocab_size, embedding_dim)
-        # 输出词向量 W_out
+        # Output word vectors W_out
         self.W_out = nn.Embedding(vocab_size, embedding_dim)
         
-        # Xavier 初始化
+        # Xavier initialization
         nn.init.xavier_uniform_(self.W_in.weight)
         nn.init.xavier_uniform_(self.W_out.weight)
     
@@ -296,32 +297,32 @@ class Word2VecCBOW(nn.Module):
         negative_words: torch.Tensor      # (batch_size, num_negatives)
     ) -> torch.Tensor:
         """
-        前向传播计算损失
+        Forward pass to compute loss
         
-        返回:
-            loss: 标量损失
+        Returns:
+            loss: Scalar loss
         """
         batch_size = context_words.size(0)
         context_size = context_words.size(1)
         num_negatives = negative_words.size(1)
         
-        # 1. 获取上下文词向量并平均
+        # 1. Get context word vectors and average
         context_vecs = self.W_in(context_words)  # (batch, context_size, dim)
         h = context_vecs.mean(dim=1)             # (batch, dim)
         
-        # 2. 获取目标词和负样本词向量
+        # 2. Get target and negative sample word vectors
         u_target = self.W_out(target_words)      # (batch, dim)
         u_neg = self.W_out(negative_words)       # (batch, num_neg, dim)
         
-        # 3. 正样本得分：u_target^T h
+        # 3. Positive sample score: u_target^T h
         pos_score = torch.sum(u_target * h, dim=1)  # (batch,)
         pos_loss = -F.logsigmoid(pos_score)
         
-        # 4. 负样本得分：u_neg^T h
+        # 4. Negative sample score: u_neg^T h
         neg_score = torch.bmm(u_neg, h.unsqueeze(2)).squeeze(2)  # (batch, num_neg)
         neg_loss = -F.logsigmoid(-neg_score).sum(dim=1)
         
-        # 5. 总损失
+        # 5. Total loss
         loss = pos_loss + neg_loss
         
         return loss.mean()
@@ -342,35 +343,35 @@ def train_word2vec_skipgram(
     device: str = 'cpu'
 ) -> Tuple[Word2VecSkipGram, List[float]]:
     """
-    训练 Skip-gram Word2Vec 模型
+    Train Skip-gram Word2Vec model
     
-    返回:
-        model: 训练好的模型
-        losses: 每轮平均损失列表
+    Returns:
+        model: Trained model
+        losses: List of average losses per epoch
     """
     model = model.to(device)
     
-    # 创建负采样器
+    # Create negative sampler
     neg_sampler = NegativeSampler(vocab)
     
-    # 准备数据
+    # Prepare data
     center_words = torch.tensor([p[0] for p in pairs], dtype=torch.long)
     context_words = torch.tensor([p[1] for p in pairs], dtype=torch.long)
     
     dataset = TensorDataset(center_words, context_words)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     
-    # 优化器
+    # Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     
-    # 训练
+    # Training
     losses = []
     total_pairs = len(pairs)
     
-    print(f"\n开始训练 Skip-gram Word2Vec")
-    print(f"训练样本：{total_pairs:,} 对")
-    print(f"批次大小：{batch_size}")
-    print(f"负样本数：{num_negatives}")
+    print(f"\nStarting Skip-gram Word2Vec training")
+    print(f"Training samples: {total_pairs:,} pairs")
+    print(f"Batch size: {batch_size}")
+    print(f"Number of negatives: {num_negatives}")
     print("-" * 60)
     
     for epoch in range(num_epochs):
@@ -382,18 +383,18 @@ def train_word2vec_skipgram(
             batch_center = batch_center.to(device)
             batch_context = batch_context.to(device)
             
-            # 采样负样本（批量）
+            # Sample negative samples (batch)
             batch_negatives = []
             for c in batch_context:
                 negatives = neg_sampler.sample(num_negatives, exclude=c.item())
                 batch_negatives.append(negatives)
             batch_negatives = torch.tensor(batch_negatives, dtype=torch.long).to(device)
             
-            # 前向传播
+            # Forward pass
             optimizer.zero_grad()
             loss = model(batch_center, batch_context, batch_negatives)
             
-            # 反向传播
+            # Backward pass
             loss.backward()
             optimizer.step()
             
@@ -405,7 +406,7 @@ def train_word2vec_skipgram(
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {avg_loss:.4f}")
     
     print("-" * 60)
-    print("训练完成!")
+    print("Training complete!")
     
     return model, losses
 
@@ -421,19 +422,19 @@ def train_word2vec_cbow(
     device: str = 'cpu'
 ) -> Tuple[Word2VecCBOW, List[float]]:
     """
-    训练 CBOW Word2Vec 模型
+    Train CBOW Word2Vec model
     """
     model = model.to(device)
     neg_sampler = NegativeSampler(vocab)
     
-    # 准备数据（填充到固定长度）
+    # Prepare data (pad to fixed length)
     max_context = max(len(ctx) for ctx, _ in pairs)
     
     context_padded = []
     targets = []
     
     for ctx, target in pairs:
-        # 填充或截断
+        # Pad or truncate
         if len(ctx) < max_context:
             ctx = ctx + [0] * (max_context - len(ctx))
         else:
@@ -451,8 +452,8 @@ def train_word2vec_cbow(
     
     losses = []
     
-    print(f"\n开始训练 CBOW Word2Vec")
-    print(f"训练样本：{len(pairs):,} 对")
+    print(f"\nStarting CBOW Word2Vec training")
+    print(f"Training samples: {len(pairs):,} pairs")
     print("-" * 60)
     
     for epoch in range(num_epochs):
@@ -464,18 +465,18 @@ def train_word2vec_cbow(
             batch_context = batch_context.to(device)
             batch_target = batch_target.to(device)
             
-            # 采样负样本
+            # Sample negative samples
             batch_negatives = []
             for t in batch_target:
                 negatives = neg_sampler.sample(num_negatives, exclude=t.item())
                 batch_negatives.append(negatives)
             batch_negatives = torch.tensor(batch_negatives, dtype=torch.long).to(device)
             
-            # 前向传播
+            # Forward pass
             optimizer.zero_grad()
             loss = model(batch_context, batch_target, batch_negatives)
             
-            # 反向传播
+            # Backward pass
             loss.backward()
             optimizer.step()
             
@@ -487,7 +488,7 @@ def train_word2vec_cbow(
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {avg_loss:.4f}")
     
     print("-" * 60)
-    print("训练完成!")
+    print("Training complete!")
     
     return model, losses
 
@@ -503,15 +504,15 @@ def visualize_embeddings(
     method: str = 'pca'
 ):
     """
-    可视化词向量（PCA/t-SNE 降维）
+    Visualize word embeddings (PCA/t-SNE dimensionality reduction)
     
-    参数:
-        model: 训练好的 Word2Vec 模型
-        vocab: 词表
-        words: 要可视化的词列表
-        method: 'pca' 或 'tsne'
+    Args:
+        model: Trained Word2Vec model
+        vocab: Vocabulary
+        words: List of words to visualize
+        method: 'pca' or 'tsne'
     """
-    # 获取词向量
+    # Get word vectors
     embeddings = []
     valid_words = []
     
@@ -526,12 +527,12 @@ def visualize_embeddings(
             valid_words.append(word)
     
     if not embeddings:
-        print("没有有效的词向量")
+        print("No valid word vectors")
         return
     
     embeddings = np.array(embeddings)
     
-    # 降维
+    # Dimensionality reduction
     if method == 'pca':
         reducer = PCA(n_components=2)
         embeddings_2d = reducer.fit_transform(embeddings)
@@ -542,11 +543,11 @@ def visualize_embeddings(
         embeddings_2d = reducer.fit_transform(embeddings)
         title = 'Word Embeddings Visualization (t-SNE)'
     
-    # 可视化
+    # Visualization
     plt.figure(figsize=(14, 12))
     plt.scatter(embeddings_2d[:, 0], embeddings_2d[:, 1], alpha=0.6, s=50)
     
-    # 添加词标签
+    # Add word labels
     for i, word in enumerate(valid_words):
         plt.annotate(word, (embeddings_2d[i, 0], embeddings_2d[i, 1]),
                     fontsize=9, alpha=0.8,
@@ -557,12 +558,12 @@ def visualize_embeddings(
     plt.ylabel('Dimension 2')
     plt.grid(True, alpha=0.3)
     plt.savefig('word_embeddings_viz.png', dpi=150, bbox_inches='tight')
-    print("词向量可视化已保存：word_embeddings_viz.png")
+    print("Word embedding visualization saved: word_embeddings_viz.png")
     plt.show()
 
 
 def plot_training_loss(losses: List[float]):
-    """绘制训练损失曲线"""
+    """Plot training loss curve"""
     plt.figure(figsize=(10, 6))
     plt.plot(losses, 'b-', linewidth=2, label='Training Loss')
     plt.xlabel('Epoch')
@@ -571,7 +572,7 @@ def plot_training_loss(losses: List[float]):
     plt.legend()
     plt.grid(True, alpha=0.3)
     plt.savefig('training_loss.png', dpi=150)
-    print("训练损失曲线已保存：training_loss.png")
+    print("Training loss curve saved: training_loss.png")
     plt.show()
 
 
@@ -582,10 +583,10 @@ def word_similarity(
     word2: str
 ) -> Optional[float]:
     """
-    计算两个词的余弦相似度
+    Compute cosine similarity between two words
     
-    返回:
-        similarity: 余弦相似度 (0-1)，如果词不在词表中返回 None
+    Returns:
+        similarity: Cosine similarity (0-1), None if word not in vocabulary
     """
     if word1 not in vocab or word2 not in vocab:
         return None
@@ -611,10 +612,10 @@ def find_similar_words(
     top_k: int = 10
 ):
     """
-    查找与给定词最相似的 top_k 个词
+    Find top_k most similar words to given word
     """
     if word not in vocab:
-        print(f"词 '{word}' 不在词表中")
+        print(f"Word '{word}' not in vocabulary")
         return
     
     idx = vocab.word2idx[word]
@@ -626,19 +627,19 @@ def find_similar_words(
         query_vec = model.embedding.weight[idx].detach().cpu().numpy()
         all_vecs = model.embedding.weight.detach().cpu().numpy()
     
-    # 计算余弦相似度
+    # Compute cosine similarity
     norms = np.linalg.norm(all_vecs, axis=1, keepdims=True)
     normalized_vecs = all_vecs / (norms + 1e-9)
     query_norm = query_vec / (np.linalg.norm(query_vec) + 1e-9)
     
     similarities = np.dot(normalized_vecs, query_norm)
     
-    # 排序（排除自己）
-    similarities[idx] = -1  # 排除查询词本身
+    # Sort (exclude self)
+    similarities[idx] = -1  # Exclude query word itself
     top_indices = np.argsort(similarities)[::-1][:top_k]
     
-    # 输出
-    print(f"\n与 '{word}' 最相似的 {top_k} 个词:")
+    # Output
+    print(f"\nTop {top_k} most similar words to '{word}':")
     print("-" * 50)
     for i, idx in enumerate(top_indices):
         w = vocab.idx2word[idx]
@@ -655,20 +656,20 @@ def word_analogy(
     top_k: int = 5
 ):
     """
-    词向量类比推理
+    Word vector analogy reasoning
     
-    经典示例：king - man + woman ≈ queen
+    Classic example: king - man + woman ≈ queen
     
-    参数:
-        word1, word2, word3: 类比方 a - b + c = ?
-        top_k: 返回数量
+    Args:
+        word1, word2, word3: Analogy a - b + c = ?
+        top_k: Number of results to return
     """
     words = [word1, word2, word3]
     indices = []
     
     for w in words:
         if w not in vocab:
-            print(f"词 '{w}' 不在词表中")
+            print(f"Word '{w}' not in vocabulary")
             return
         indices.append(vocab.word2idx[w])
     
@@ -677,145 +678,26 @@ def word_analogy(
     else:
         vecs = model.embedding.weight.detach().cpu().numpy()
     
-    # 计算类比向量：a - b + c
+    # Compute analogy vector: a - b + c
     result_vec = vecs[indices[0]] - vecs[indices[1]] + vecs[indices[2]]
     
-    # 查找最接近的词
+    # Find closest words
     norms = np.linalg.norm(vecs, axis=1, keepdims=True)
     normalized_vecs = vecs / (norms + 1e-9)
     result_norm = result_vec / (np.linalg.norm(result_vec) + 1e-9)
     
     similarities = np.dot(normalized_vecs, result_norm)
     
-    # 排除输入词
+    # Exclude input words
     for idx in indices:
         similarities[idx] = -1
     
     top_indices = np.argsort(similarities)[::-1][:top_k]
     
-    # 输出
-    print(f"\n词向量类比：{word1} - {word2} + {word3} ≈ ?")
+    # Output
+    print(f"\nWord vector analogy: {word1} - {word2} + {word3} ≈ ?")
     print("-" * 50)
     for i, idx in enumerate(top_indices):
         w = vocab.idx2word[idx]
         sim = similarities[idx]
         print(f"{i+1}. {w:20s} {sim:.4f}")
-
-
-# ============================================================================
-# 7. Test Functions
-# ============================================================================
-
-def test_vocabulary():
-    """测试词表构建"""
-    print("=" * 60)
-    print("测试词表构建")
-    print("=" * 60)
-    
-    sentences = [
-        ['the', 'cat', 'sat', 'on', 'the', 'mat'],
-        ['the', 'dog', 'sat', 'on', 'the', 'log'],
-        ['the', 'cat', 'and', 'the', 'dog', 'are', 'friends'],
-    ] * 100  # 重复增加词频
-    
-    vocab = Vocabulary(min_freq=10)
-    vocab.build(sentences)
-    
-    print(f"词表大小：{len(vocab)}")
-    print(f"词表示例：{list(vocab.word2idx.keys())[:10]}")
-    print()
-
-
-def test_skipgram_pairs():
-    """测试 Skip-gram 样本生成"""
-    print("=" * 60)
-    print("测试 Skip-gram 样本生成")
-    print("=" * 60)
-    
-    sentences = [
-        ['the', 'cat', 'sat', 'on', 'the', 'mat'],
-        ['the', 'dog', 'sat', 'on', 'the', 'log'],
-    ] * 100
-    
-    vocab = Vocabulary(min_freq=10)
-    vocab.build(sentences)
-    
-    pairs = generate_skipgram_pairs(sentences, vocab, window_size=2)
-    
-    print(f"样本对数：{len(pairs)}")
-    print(f"示例：{pairs[:5]}")
-    print()
-
-
-def test_model_forward():
-    """测试模型前向传播"""
-    print("=" * 60)
-    print("测试 Skip-gram 模型前向传播")
-    print("=" * 60)
-    
-    vocab_size = 1000
-    embedding_dim = 300
-    batch_size = 32
-    num_negatives = 5
-    
-    model = Word2VecSkipGram(vocab_size, embedding_dim)
-    
-    # 假数据
-    center = torch.randint(0, vocab_size, (batch_size,))
-    context = torch.randint(0, vocab_size, (batch_size,))
-    negatives = torch.randint(0, vocab_size, (batch_size, num_negatives))
-    
-    # 前向传播
-    loss = model(center, context, negatives)
-    
-    print(f"输入中心词形状：{center.shape}")
-    print(f"输入上下文词形状：{context.shape}")
-    print(f"输入负样本形状：{negatives.shape}")
-    print(f"损失值：{loss.item():.4f}")
-    print(f"参数量：{sum(p.numel() for p in model.parameters()):,}")
-    print()
-
-
-def test_similarity():
-    """测试词相似度"""
-    print("=" * 60)
-    print("测试词相似度计算")
-    print("=" * 60)
-    
-    # 创建小模型测试
-    vocab_size = 100
-    model = Word2VecSkipGram(vocab_size, 50)
-    
-    # 创建假词表
-    vocab = Vocabulary()
-    vocab.word2idx = {f'word{i}': i for i in range(vocab_size)}
-    vocab.idx2word = {i: f'word{i}' for i in range(vocab_size)}
-    
-    sim = word_similarity(model, vocab, 'word0', 'word1')
-    print(f"word0 和 word1 的相似度：{sim:.4f}")
-    print()
-
-
-# ============================================================================
-# Main
-# ============================================================================
-
-if __name__ == "__main__":
-    print("\n" + "=" * 60)
-    print("Word Embedding 数学原理与实现 —— 测试套件")
-    print("=" * 60 + "\n")
-    
-    # 运行测试
-    test_vocabulary()
-    test_skipgram_pairs()
-    test_model_forward()
-    test_similarity()
-    
-    print("=" * 60)
-    print("所有测试完成！")
-    print("=" * 60)
-    print("\n下一步:")
-    print("  1. 阅读 Word-Embedding-Math-and-Implementation.md")
-    print("  2. 准备训练语料（如：text8、wikitext）")
-    print("  3. 运行完整训练流程")
-    print("  4. 可视化词向量并分析")

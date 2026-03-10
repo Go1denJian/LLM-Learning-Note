@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-Word2Vec 组件测试
+Word2Vec Component Tests
 
-测试 Vocabulary、NegativeSampler、Word2Vec 模型等组件。
+Tests Vocabulary, NegativeSampler, Word2Vec models, and other components.
 
-用法:
+Usage:
     python examples/test_word2vec.py
 """
 
 import sys
 import os
 
-# 添加 src 到路径
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+# Add src to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from src.word2vec import (
     Vocabulary,
@@ -28,9 +28,9 @@ import torch
 
 
 def test_vocabulary():
-    """测试词表构建"""
+    """Test vocabulary construction"""
     print("=" * 60)
-    print("测试 1: 词表构建")
+    print("Test 1: Vocabulary Construction")
     print("=" * 60)
     
     sentences = [
@@ -42,18 +42,18 @@ def test_vocabulary():
     vocab = Vocabulary(min_freq=10)
     vocab.build(sentences)
     
-    assert len(vocab) > 0, "词表为空"
-    assert 'cat' in vocab, "cat 不在词表中"
+    assert len(vocab) > 0, "Vocabulary is empty"
+    assert 'cat' in vocab, "cat not in vocabulary"
     
-    print(f"✓ 词表大小：{len(vocab)}")
-    print(f"✓ 词表示例：{list(vocab.word2idx.keys())[:5]}")
+    print(f"✓ Vocabulary size: {len(vocab)}")
+    print(f"✓ Sample words: {list(vocab.word2idx.keys())[:5]}")
     print()
 
 
 def test_skipgram_pairs():
-    """测试 Skip-gram 样本生成"""
+    """Test Skip-gram sample generation"""
     print("=" * 60)
-    print("测试 2: Skip-gram 样本生成")
+    print("Test 2: Skip-gram Sample Generation")
     print("=" * 60)
     
     sentences = [
@@ -66,17 +66,17 @@ def test_skipgram_pairs():
     
     pairs = generate_skipgram_pairs(sentences, vocab, window_size=2)
     
-    assert len(pairs) > 0, "样本对为空"
+    assert len(pairs) > 0, "Sample pairs is empty"
     
-    print(f"✓ 样本对数：{len(pairs)}")
-    print(f"✓ 示例：{pairs[:3]}")
+    print(f"✓ Number of pairs: {len(pairs)}")
+    print(f"✓ Examples: {pairs[:3]}")
     print()
 
 
 def test_negative_sampler():
-    """测试负采样器"""
+    """Test negative sampler"""
     print("=" * 60)
-    print("测试 3: 负采样器")
+    print("Test 3: Negative Sampler")
     print("=" * 60)
     
     sentences = [['word' + str(i) for i in range(100)]] * 50
@@ -86,18 +86,18 @@ def test_negative_sampler():
     sampler = NegativeSampler(vocab, power=0.75)
     samples = sampler.sample(5, exclude=0)
     
-    assert len(samples) == 5, "采样数量不正确"
-    assert 0 not in samples, "采样包含排除的词"
+    assert len(samples) == 5, "Sample count incorrect"
+    assert 0 not in samples, "Sample contains excluded word"
     
-    print(f"✓ 采样结果：{samples}")
-    print(f"✓ 采样分布和：{sampler.probs.sum():.4f}")
+    print(f"✓ Samples: {samples}")
+    print(f"✓ Probability sum: {sampler.probs.sum():.4f}")
     print()
 
 
 def test_skipgram_model():
-    """测试 Skip-gram 模型"""
+    """Test Skip-gram model"""
     print("=" * 60)
-    print("测试 4: Skip-gram 模型")
+    print("Test 4: Skip-gram Model")
     print("=" * 60)
     
     vocab_size = 1000
@@ -107,27 +107,27 @@ def test_skipgram_model():
     
     model = Word2VecSkipGram(vocab_size, embedding_dim)
     
-    # 假数据
+    # Fake data
     center = torch.randint(0, vocab_size, (batch_size,))
     context = torch.randint(0, vocab_size, (batch_size,))
     negatives = torch.randint(0, vocab_size, (batch_size, num_negatives))
     
-    # 前向传播
+    # Forward pass
     loss = model(center, context, negatives)
     
-    assert loss.dim() == 0, "损失应为标量"
-    assert loss.item() >= 0, "损失应为非负"
+    assert loss.dim() == 0, "Loss should be scalar"
+    assert loss.item() >= 0, "Loss should be non-negative"
     
-    print(f"✓ 输入中心词形状：{center.shape}")
-    print(f"✓ 损失值：{loss.item():.4f}")
-    print(f"✓ 参数量：{sum(p.numel() for p in model.parameters()):,}")
+    print(f"✓ Input center shape: {center.shape}")
+    print(f"✓ Loss value: {loss.item():.4f}")
+    print(f"✓ Parameters: {sum(p.numel() for p in model.parameters()):,}")
     print()
 
 
 def test_cbow_model():
-    """测试 CBOW 模型"""
+    """Test CBOW model"""
     print("=" * 60)
-    print("测试 5: CBOW 模型")
+    print("Test 5: CBOW Model")
     print("=" * 60)
     
     vocab_size = 1000
@@ -138,26 +138,26 @@ def test_cbow_model():
     
     model = Word2VecCBOW(vocab_size, embedding_dim)
     
-    # 假数据
+    # Fake data
     context = torch.randint(0, vocab_size, (batch_size, context_size))
     target = torch.randint(0, vocab_size, (batch_size,))
     negatives = torch.randint(0, vocab_size, (batch_size, num_negatives))
     
-    # 前向传播
+    # Forward pass
     loss = model(context, target, negatives)
     
-    assert loss.dim() == 0, "损失应为标量"
+    assert loss.dim() == 0, "Loss should be scalar"
     
-    print(f"✓ 输入上下文形状：{context.shape}")
-    print(f"✓ 损失值：{loss.item():.4f}")
-    print(f"✓ 参数量：{sum(p.numel() for p in model.parameters()):,}")
+    print(f"✓ Input context shape: {context.shape}")
+    print(f"✓ Loss value: {loss.item():.4f}")
+    print(f"✓ Parameters: {sum(p.numel() for p in model.parameters()):,}")
     print()
 
 
 def test_word_similarity():
-    """测试词相似度"""
+    """Test word similarity"""
     print("=" * 60)
-    print("测试 6: 词相似度")
+    print("Test 6: Word Similarity")
     print("=" * 60)
     
     vocab_size = 100
@@ -169,16 +169,16 @@ def test_word_similarity():
     
     sim = word_similarity(model, vocab, 'word0', 'word1')
     
-    assert sim is not None, "相似度计算失败"
-    assert 0 <= sim <= 1, "相似度应在 0-1 之间"
+    assert sim is not None, "Similarity computation failed"
+    assert 0 <= sim <= 1, "Similarity should be in 0-1"
     
-    print(f"✓ word0 和 word1 的相似度：{sim:.4f}")
+    print(f"✓ Similarity between word0 and word1: {sim:.4f}")
     print()
 
 
 def main():
     print("\n" + "=" * 60)
-    print("Word2Vec 组件测试套件")
+    print("Word2Vec Component Test Suite")
     print("=" * 60 + "\n")
     
     tests = [
@@ -198,13 +198,13 @@ def main():
             test()
             passed += 1
         except Exception as e:
-            print(f"✗ 测试失败：{test.__name__}")
-            print(f"  错误：{e}")
+            print(f"✗ Test failed: {test.__name__}")
+            print(f"  Error: {e}")
             print()
             failed += 1
     
     print("=" * 60)
-    print(f"测试结果：{passed} 通过，{failed} 失败")
+    print(f"Test results: {passed} passed, {failed} failed")
     print("=" * 60)
     
     return failed == 0
