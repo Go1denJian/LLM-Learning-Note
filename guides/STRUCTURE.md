@@ -23,7 +23,7 @@ LLM-Learning-Note/
 │   ├── requirements.txt                    # Python 依赖
 │   └── .gitignore                          # Git 忽略规则
 │
-├── docs/                                # 教案与文档
+├── docs/                                # 学习笔记
 │   ├── README.md                          # 文档中心入口
 │   ├── Word-Embedding-Math-and-Implementation.md
 │   ├── Transformer-Math-and-Implementation.md
@@ -71,7 +71,7 @@ LLM-Learning-Note/
 
 ### 1. 分离关注点
 
-- `docs/` - 只放文档（Markdown）
+- `docs/` - 只放笔记（Markdown）
 - `src/` - 只放代码（Python 模块）
 - `examples/` - 只放可运行脚本
 - `guides/` - 只放学习指南
@@ -83,7 +83,7 @@ guides/QUICKSTART.md     → 5 分钟入门
     ↓
 docs/README.md           → 完整学习路线
     ↓
-docs/*.md                → 核心教案
+docs/*.md                → 核心笔记
     ↓
 src/                     → 代码实现
     ↓
@@ -103,7 +103,7 @@ examples/                → 实践练习
 
 ### 添加新内容
 
-**新教案** → 放入 `docs/`
+**新笔记** → 放入 `docs/`
 ```bash
 docs/My-New-Topic-Math-and-Implementation.md
 ```
@@ -135,7 +135,7 @@ guides/MY-GUIDE.md
 
 以下内容应移入 `archive/`：
 
-- 旧版笔记（被新教案替代）
+- 旧版笔记（被新笔记替代）
 - 过时的代码实现
 - 历史版本文件
 
@@ -144,4 +144,3 @@ guides/MY-GUIDE.md
 ---
 
 最后更新：2026-03-11
-作者：OpenClaw Engineer

@@ -5,7 +5,7 @@
 本目录包含以下文件：
 
 ### 核心文档
-- **Transformer-Math-and-Implementation.md** - 主教案，从数学原理到代码实现
+- **Transformer-Math-and-Implementation.md** - 主笔记，从数学原理到代码实现
 - **Transformer.md** - 架构总览与组件详解（已有）
 
 ### 代码文件
@@ -48,25 +48,25 @@ python transformer_numpy_demo.py
 
 ---
 
-## 学习路线
+## 学习建议
 
 ### 第一阶段：理解注意力机制（2-3 小时）
 
-1. 阅读教案第 1-3 节
+1. 阅读笔记第 1-3 节
 2. 理解 $QK^T$ 的几何意义
 3. 推导缩放因子的作用
 4. 运行 `transformer_numpy_demo.py` 验证数学性质
 
 ### 第二阶段：多头注意力与位置编码（2-3 小时）
 
-1. 阅读教案第 4-5 节
+1. 阅读笔记第 4-5 节
 2. 理解子空间投影
 3. 推导位置编码的线性关系
 4. 查看生成的可视化图表
 
 ### 第三阶段：完整实现（4-6 小时）
 
-1. 阅读教案第 6 节
+1. 阅读笔记第 6 节
 2. 运行 `transformer_implementation.py`
 3. 修改代码实验不同配置
 4. 完成练习与思考题
@@ -154,5 +154,4 @@ $$
 
 ---
 
-**最后更新**: 2026-03-11  
-**作者**: OpenClaw Engineer (AI + Mathematics Professor)
+最后更新：2026-03-11

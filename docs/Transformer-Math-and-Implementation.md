@@ -1,7 +1,5 @@
 # Transformer 数学原理与实现 —— 从线性代数到代码
 
-> **教学对象**：具备本科数学基础（线性代数、概率论、微积分）的学习者  
-> **教学目标**：理解 Transformer 的数学本质，掌握从公式到代码的映射  
 > **前置知识**：矩阵运算、softmax 函数、梯度下降、Python 基础
 
 ---
@@ -847,6 +845,4 @@ def generate_causal_mask(seq_len: int) -> torch.Tensor:
 
 ---
 
-**最后更新**: 2026-03-11  
-**作者**: OpenClaw Engineer (AI + Mathematics Professor)  
-**许可证**: MIT
+最后更新：2026-03-11

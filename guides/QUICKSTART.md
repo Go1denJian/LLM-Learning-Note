@@ -66,7 +66,7 @@ Transformer 组件测试套件
 
 ### 选项 A：Word Embedding（推荐入门）
 
-1. **阅读教案**
+1. **阅读笔记**
    ```bash
    # 在线查看或下载 PDF
    cat docs/Word-Embedding-Math-and-Implementation.md
@@ -83,7 +83,7 @@ Transformer 组件测试套件
 
 ### 选项 B：Transformer（进阶）
 
-1. **阅读教案**
+1. **阅读笔记**
    ```bash
    cat docs/Transformer-Math-and-Implementation.md
    ```
@@ -101,17 +101,17 @@ Transformer 组件测试套件
 
 ## 下一步
 
-### 第 1 周：Word Embedding
-- 完成教案第 1-5 节阅读
+### Word Embedding
+- 完成笔记第 1-5 节阅读
 - 推导负采样梯度公式
 - 运行训练示例并调整超参数
 
-### 第 2 周：Transformer
-- 完成教案第 1-6 节阅读
+### Transformer
+- 完成笔记第 1-6 节阅读
 - 理解多头注意力的子空间投影
 - 修改 Encoder 层数并观察效果
 
-### 第 3 周：综合实践
+### 综合实践
 - 用自己的语料训练词向量
 - 可视化分析词向量质量
 - 尝试实现完整的 Transformer
@@ -149,12 +149,11 @@ CONFIG = {
 
 ## 资源链接
 
-- [完整文档](./docs/README.md)
-- [学习路线](./docs/README.md#学习指南)
-- [代码文档](./src/README.md)（待创建）
+- [完整文档](../docs/README.md)
+- [代码文档](../src/README.md)
 
 ---
 
 祝你学习愉快！
 
-如有问题，欢迎查阅教案或运行测试脚本验证环境。
+如有问题，欢迎查阅笔记或运行测试脚本验证环境。

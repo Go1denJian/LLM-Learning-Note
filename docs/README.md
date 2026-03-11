@@ -1,10 +1,10 @@
 # 文档中心
 
-LLM Learning Notes 的完整文档与学习指南。
+LLM Learning Notes 的完整笔记索引。
 
 ---
 
-## 核心教案
+## 核心笔记
 
 ### Word Embedding
 
@@ -44,49 +44,6 @@ LLM Learning Notes 的完整文档与学习指南。
 8. 练习与思考题
 
 **前置知识**：矩阵运算、softmax 函数、Python 基础
-
----
-
-## 学习指南
-
-### 学习路线
-
-```
-Week 1: Word Embedding          Week 2: Transformer            Week 3: 综合实践
-    ↓                                ↓                                ↓
-教案阅读 → 代码验证 → 练习       教案阅读 → 代码验证 → 练习       训练模型 → 可视化分析
-```
-
-### 详细计划
-
-#### 第 1 周：Word Embedding 基础
-
-| 天数 | 任务 | 产出 |
-|------|------|------|
-| Day 1-2 | 阅读教案第 1-5 节 | 理解 PMI 和负采样 |
-| Day 3 | 阅读教案第 6-7 节 | 理解梯度推导 |
-| Day 4 | 运行 `examples/test_word2vec.py` | 代码验证 |
-| Day 5 | 完成课后练习 | 巩固知识 |
-| Day 6-7 | 扩展阅读 | PMI 矩阵分解论文 |
-
-#### 第 2 周：Transformer 核心
-
-| 天数 | 任务 | 产出 |
-|------|------|------|
-| Day 1-2 | 阅读教案第 1-4 节 | 理解注意力机制 |
-| Day 3 | 阅读教案第 5-6 节 | 理解位置编码 |
-| Day 4 | 运行 `examples/test_transformer.py` | 代码验证 |
-| Day 5 | 运行 `src/transformer/numpy_demo.py` | 数学验证 |
-| Day 6-7 | 完成课后练习 | 巩固知识 |
-
-#### 第 3 周：综合实践
-
-| 天数 | 任务 | 产出 |
-|------|------|------|
-| Day 1-2 | 运行 `examples/train_word2vec.py` | 训练词向量 |
-| Day 3 | 可视化分析 | 词向量图 |
-| Day 4-5 | 尝试修改超参数 | 对比实验 |
-| Day 6-7 | 总结与复习 | 学习笔记 |
 
 ---
 
@@ -225,4 +182,3 @@ python examples/train_word2vec.py
 ---
 
 最后更新：2026-03-11
-作者：OpenClaw Engineer

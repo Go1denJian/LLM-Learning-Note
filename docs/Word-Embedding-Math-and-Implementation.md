@@ -1,7 +1,5 @@
 # Word Embedding 数学原理与实现 —— 从共现矩阵到词向量
 
-> **教学对象**：具备本科数学基础（线性代数、概率论、微积分）的学习者  
-> **教学目标**：理解 Word2Vec 的数学本质，掌握从共现矩阵到词向量的推导  
 > **前置知识**：矩阵分解、条件概率、梯度下降、Python 基础  
 > **与 Transformer 的联系**：Word Embedding 是 Transformer 输入层的基础
 
@@ -37,10 +35,11 @@ $$
 
 **问题**：
 1. **维度灾难**：$|V|$ 可达百万级，向量稀疏
-2. **语义鸿沟**：任意两个词的点积为 0，无法衡量相似度
+2. **语义鸿沟**：任意两个词正交（内积为 0），无法表达语义距离
    $$
    \mathbf{v}_{\text{king}}^\top \mathbf{v}_{\text{queen}} = 0, \quad \mathbf{v}_{\text{king}}^\top \mathbf{v}_{\text{apple}} = 0
    $$
+   即：$\text{dist}(\mathbf{v}_{\text{king}}, \mathbf{v}_{\text{queen}}) = \text{dist}(\mathbf{v}_{\text{king}}, \mathbf{v}_{\text{apple}})$，无法区分语义相似度
 3. **计算低效**：矩阵规模 $O(|V|^2)$
 
 ### 1.2 Word Embedding 的思想
@@ -59,20 +58,11 @@ $$
 **优势**：
 1. **语义保持**：相似词的向量距离近
    $$
-   \text{cosine}(\mathbf{v}_{\text{king}}, \mathbf{v}_{\text{queen}}) \approx 0.8
+   \text{dist}(\mathbf{v}_{\text{king}}, \mathbf{v}_{\text{queen}}) \ll \text{dist}(\mathbf{v}_{\text{king}}, \mathbf{v}_{\text{apple}})
    $$
+   其中 $\text{dist}(\cdot, \cdot)$ 表示向量距离（如欧氏距离或余弦距离）
 2. **计算高效**：矩阵规模 $O(|V| \cdot d)$
 3. **可迁移性**：预训练词向量可用于多种下游任务
-
-### 1.3 本科数学知识映射表
-
-| 数学概念 | Word Embedding 中的应用 | 代码对应 |
-|---------|----------------------|---------|
-| 条件概率 $P(w_2|w_1)$ | Skip-gram 预测上下文 | `softmax(W_out @ h)` |
-| 矩阵分解 $X \approx UV$ | 词向量学习 | `W_in, W_out` |
-| 梯度下降 $\theta - \eta \nabla_\theta \mathcal{L}$ | 参数更新 | `optimizer.step()` |
-| Sigmoid 函数 $\sigma(x)$ | 负采样二分类 | `torch.sigmoid()` |
-| PMI 点互信息 | 共现矩阵分析 | `np.log(P_ij / (P_i * P_j))` |
 
 ---
 
@@ -83,6 +73,11 @@ $$
 **One-Hot + Softmax 的计算成本**：
 
 假设词表 $|V| = 100,000$，嵌入维度 $d = 300$。
+
+**符号定义**：
+- $W_{in} \in \mathbb{R}^{d \times |V|}$：输入嵌入矩阵（词表→隐藏层）
+- $W_{out} \in \mathbb{R}^{d \times |V|}$：输出嵌入矩阵（隐藏层→词表）
+- $\mathbf{x} \in \mathbb{R}^{|V|}$：输入 one-hot 向量
 
 **前向传播**：
 1. 输入层 → 隐藏层：$\mathbf{h} = W_{in}^\top \mathbf{x}$，其中 $\mathbf{x}$ 是 one-hot 向量
@@ -110,8 +105,8 @@ $$
 
 | 方法 | 复杂度 | 思想 |
 |-----|--------|------|
-| Standard Softmax | $O(|V| \cdot d)$ | 全词表归一化 |
-| Hierarchical Softmax | $O(d \cdot \log |V|)$ | 二叉树路径 |
+| Standard Softmax | $O(V \cdot d)$ | 全词表归一化 |
+| Hierarchical Softmax | $O(d \cdot \log V)$ | 二叉树路径 |
 | Negative Sampling | $O(k \cdot d)$ | 采样 $k$ 个负例 |
 
 **Negative Sampling 优势**：
@@ -210,13 +205,13 @@ $$
    $$
    \mathbf{h} = \frac{1}{2m} \sum_{-m \leq j \leq m, j \neq 0} \mathbf{v}_{w_{t+j}}
    $$
-   其中 $\mathbf{v}_{w} = W_{in}[:, w]$。
+   其中 $\mathbf{v}_{w} \in \mathbb{R}^d$ 是词 $w$ 的输入向量（$W_{in} \in \mathbb{R}^{d \times |V|}$ 的第 $w$ 列）。
 
 2. 输出层 softmax：
    $$
    P(w_t \mid \text{context}) = \frac{\exp(\mathbf{u}_{w_t}^\top \mathbf{h})}{\sum_{w \in V} \exp(\mathbf{u}_w^\top \mathbf{h})}
    $$
-   其中 $\mathbf{u}_w = W_{out}[:, w]$。
+   其中 $\mathbf{u}_w \in \mathbb{R}^d$ 是词 $w$ 的输出向量（$W_{out} \in \mathbb{R}^{d \times |V|}$ 的第 $w$ 列）。
 
 **损失函数**（负对数似然）：
 $$
@@ -276,6 +271,10 @@ $$
 
 - **正样本**：真实共现的词对 $(w_c, w_o)$，标签 $D=1$
 - **负样本**：随机采样的词对 $(w_c, w_i)$，标签 $D=0$
+
+**符号说明**：
+- $\mathbf{v}_{w} \in \mathbb{R}^d$：词 $w$ 的输入向量（$W_{in}$ 的第 $w$ 列）
+- $\mathbf{u}_{w} \in \mathbb{R}^d$：词 $w$ 的输出向量（$W_{out}$ 的第 $w$ 列）
 
 **二分类概率**：
 $$
@@ -938,12 +937,12 @@ class Word2VecCBOW(nn.Module):
 
 | 符号 | 含义 | 典型值 |
 |-----|------|--------|
-| $|V|$ | 词表大小 | 100,000 |
+| $V$ | 词表大小 | 100,000 |
 | $d$ | 嵌入维度 | 300 |
 | $m$ | 上下文窗口 | 2-5 |
 | $k$ | 负样本数量 | 5-20 |
-| $W_{in}$ | 输入词向量矩阵 | $\mathbb{R}^{d \times |V|}$ |
-| $W_{out}$ | 输出词向量矩阵 | $\mathbb{R}^{d \times |V|}$ |
+| $W_{in}$ | 输入词向量矩阵 | $\mathbb{R}^{d \times V}$ |
+| $W_{out}$ | 输出词向量矩阵 | $\mathbb{R}^{d \times V}$ |
 | $\mathbf{v}_w$ | 词 $w$ 的输入向量 | $\mathbb{R}^d$ |
 | $\mathbf{u}_w$ | 词 $w$ 的输出向量 | $\mathbb{R}^d$ |
 | $P(w)$ | 负采样分布 | $f(w)^{3/4} / Z$ |
@@ -959,6 +958,4 @@ class Word2VecCBOW(nn.Module):
 
 ---
 
-**最后更新**: 2026-03-11  
-**作者**: OpenClaw Engineer (AI + Mathematics Professor)  
-**许可证**: MIT
+最后更新：2026-03-11

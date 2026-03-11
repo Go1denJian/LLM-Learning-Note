@@ -2,7 +2,7 @@
 
 从数学原理到代码实现的深度学习与大模型学习笔记。
 
-> 教学理念：理解公式背后的直觉，掌握从数学到代码的映射
+> 核心理念：理解公式背后的直觉，掌握从数学到代码的映射
 
 ---
 
@@ -35,9 +35,9 @@ python examples/train_word2vec.py
 
 ### 3. 阅读文档
 
-- [学习指南](docs/README.md) - 完整学习路线
-- [Word Embedding 教案](docs/Word-Embedding-Math-and-Implementation.md)
-- [Transformer 教案](docs/Transformer-Math-and-Implementation.md)
+- [文档中心](docs/README.md) - 完整笔记索引
+- [Word Embedding](docs/Word-Embedding-Math-and-Implementation.md)
+- [Transformer](docs/Transformer-Math-and-Implementation.md)
 
 ---
 
@@ -45,7 +45,7 @@ python examples/train_word2vec.py
 
 ```
 LLM-Learning-Note/
-├── docs/                      # 文档与教案
+├── docs/                      # 学习笔记
 │   ├── README.md
 │   ├── Word-Embedding-Math-and-Implementation.md
 │   ├── Transformer-Math-and-Implementation.md
@@ -81,7 +81,7 @@ LLM-Learning-Note/
 
 | 资源 | 说明 |
 |------|------|
-| [教案](docs/Word-Embedding-Math-and-Implementation.md) | 从共现矩阵到 Word2Vec |
+| [笔记](docs/Word-Embedding-Math-and-Implementation.md) | 从共现矩阵到 Word2Vec |
 | [源码](src/word2vec/__init__.py) | Skip-gram + CBOW 实现 |
 | [示例](examples/train_word2vec.py) | 完整训练流程 |
 
@@ -91,30 +91,11 @@ LLM-Learning-Note/
 
 | 资源 | 说明 |
 |------|------|
-| [教案](docs/Transformer-Math-and-Implementation.md) | 从线性代数到 Transformer |
+| [笔记](docs/Transformer-Math-and-Implementation.md) | 从线性代数到 Transformer |
 | [源码](src/transformer/__init__.py) | Encoder 完整实现 |
 | [NumPy 验证](src/transformer/numpy_demo.py) | 纯 NumPy 数学验证 |
 
 数学内容：注意力机制、多头注意力、位置编码
-
----
-
-## 学习路线
-
-### 第 1 周：Word Embedding 基础
-- 阅读 Word Embedding 教案（第 1-5 节）
-- 运行 `examples/test_word2vec.py`
-- 完成课后练习
-
-### 第 2 周：Transformer 核心
-- 阅读 Transformer 教案（第 1-6 节）
-- 运行 `examples/test_transformer.py`
-- 完成课后练习
-
-### 第 3 周：综合实践
-- 运行 `examples/train_word2vec.py` 训练词向量
-- 可视化分析词向量质量
-- 尝试修改模型配置
 
 ---
 
@@ -153,4 +134,3 @@ MIT License
 ---
 
 最后更新：2026-03-11
-作者：OpenClaw Engineer (AI + Mathematics Professor)

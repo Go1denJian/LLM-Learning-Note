@@ -5,9 +5,9 @@
 ```
 LLM-Learning-Note/
 │
-├── 核心教案
-│   ├── Word-Embedding-Math-and-Implementation.md    # Word2Vec 完整教案（推荐）
-│   ├── Transformer-Math-and-Implementation.md       # Transformer 完整教案（推荐）
+├── 核心笔记
+│   ├── Word-Embedding-Math-and-Implementation.md    # Word2Vec 完整笔记（推荐）
+│   ├── Transformer-Math-and-Implementation.md       # Transformer 完整笔记（推荐）
 │   │
 │   └── 存档笔记（参考用）
 │       ├── Word Embedding.md                        # Word2Vec 原始笔记
@@ -42,18 +42,18 @@ LLM-Learning-Note/
 
 ---
 
-## 学习路径
+## 学习建议
 
 ### 入门（第 1 周）
 ```
-Day 1-2: Word Embedding 教案 + word2vec_implementation.py
+Day 1-2: Word Embedding 笔记 + word2vec_implementation.py
 Day 3-4: 运行 example_train_word2vec.py
-Day 5-7: Transformer 教案第 1-4 节
+Day 5-7: Transformer 笔记第 1-4 节
 ```
 
 ### 进阶（第 2 周）
 ```
-Day 1-3: Transformer 教案第 5-8 节
+Day 1-3: Transformer 笔记第 5-8 节
 Day 4-5: 运行 transformer_implementation.py
 Day 6-7: 完成练习与思考题
 ```
@@ -62,7 +62,7 @@ Day 6-7: 完成练习与思考题
 
 ## 文件说明
 
-### 核心教案
+### 核心笔记
 
 | 文件 | 内容 | 适合人群 |
 |------|------|---------|
@@ -84,7 +84,7 @@ Day 6-7: 完成练习与思考题
 
 ### 1. 阅读顺序
 1. 先看 README.md 了解整体结构
-2. 选择感兴趣的教案开始学习
+2. 选择感兴趣的笔记开始学习
 3. 边读边运行对应代码
 
 ### 2. 代码运行
@@ -104,7 +104,7 @@ python transformer_numpy_demo.py
 
 ### 3. 扩展学习
 - `word2vec/` 和 `GPT2/` 目录包含扩展内容
-- 可在核心教案完成后参考
+- 可在核心笔记完成后参考
 
 ---
 
@@ -125,7 +125,7 @@ python transformer_numpy_demo.py
 
 | 日期 | 更新内容 |
 |------|---------|
-| 2026-03-11 | 完成 Word Embedding 和 Transformer 核心教案 |
+| 2026-03-11 | 完成 Word Embedding 和 Transformer 核心笔记 |
 | 2026-03-11 | 添加完整代码实现和训练示例 |
 | 2026-03-11 | 优化仓库结构和文档 |
 
@@ -133,11 +133,10 @@ python transformer_numpy_demo.py
 
 ## 注意事项
 
-1. **存档笔记**：`Word Embedding.md` 和 `Transformer.md` 是原始笔记，内容较简略，建议以新教案为主
+1. **存档笔记**：`Word Embedding.md` 和 `Transformer.md` 是原始笔记，内容较简略，建议以新笔记为主
 2. **代码依赖**：确保安装 PyTorch、NumPy、Matplotlib、scikit-learn
 3. **GPU 加速**：如果有 GPU，修改 `device='cuda'` 可加速训练
 
 ---
 
 最后更新：2026-03-11
-作者：OpenClaw Engineer
