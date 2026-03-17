@@ -339,65 +339,60 @@ $$
 \frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_t} = \underbrace{\frac{\partial \mathcal{L}_t}{\partial h_t}}_{\text{直接梯度}} + \underbrace{\frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_{t+1}} \cdot\frac{\partial h_{t+1}}{\partial h_t}}_{\text{传播梯度}}
 $$
 
-<!--
-【讨论：关于梯度求导的深入理解】
-
-Q: $\frac{\partial \mathcal{L}_t}{\partial h_t}$ 和 $\frac{\partial \mathcal{L}_{t+N}}{\partial h_{t+N}}$ 有什么区别？
-
-A: 从函数形式上看，它们完全相同！
-
-$\mathcal{L}_t(h_t) = \ell(\text{softmax}(W_{hy} h_t + b_y), y_t)$
-$\mathcal{L}_{t+N}(h_{t+N}) = \ell(\text{softmax}(W_{hy} h_{t+N} + b_y), y_{t+N})$
-
-两者都是同一个损失函数 $\ell$ 与 softmax、线性变换的复合，只是：
-- 输入的隐藏状态不同（$h_t$ vs $h_{t+N}$）
-- 输入的真实标签不同（$y_t$ vs $y_{t+N}$）
-
-求导结果的形式完全相同：
-- $\frac{\partial \mathcal{L}_t}{\partial h_t} = W_{hy}^T (\hat{y}_t - y_t)$
-- $\frac{\partial \mathcal{L}_{t+N}}{\partial h_{t+N}} = W_{hy}^T (\hat{y}_{t+N} - y_{t+N})$
-
-角标 $t$ 和 $t+N$ 只是标记"在哪个时刻求值"，不改变函数本身的结构。
-
----
-
-Q: 那为什么 $\frac{\partial \mathcal{L}_{t+1}}{\partial h_t}$ 和 $\frac{\partial \mathcal{L}_{t+1}}{\partial h_{t+1}}$ 不同？
-
-A: 关键区别在于"对谁求导"！
-
-$\frac{\partial \mathcal{L}_{t+1}}{\partial h_{t+1}}$：直接对 $h_{t+1}$ 求导
-= $W_{hy}^T (\hat{y}_{t+1} - y_{t+1})$ （标准形式）
-
-$\frac{\partial \mathcal{L}_{t+1}}{\partial h_t}$：对 $h_t$ 求导，需要通过链式法则
-= $\frac{\partial \mathcal{L}_{t+1}}{\partial h_{t+1}} \cdot \frac{\partial h_{t+1}}{\partial h_t}$
-
-多了一个雅可比矩阵 $\frac{\partial h_{t+1}}{\partial h_t} = \text{diag}(1-\tanh^2) \cdot W_{hh}$，
-这就是梯度在时间上递归传播的数学本质。
-
----
-
-Q: 为什么公式中只显式出现 $h_{t+1}$，而没有 $h_{t+2}, h_{t+3}, ...$？
-
-A: 这是递归定义的巧妙之处，既是数学恒等变形，也有实际计算意义。
-
-总梯度展开：
-$\frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_t} = \frac{\partial \mathcal{L}_t}{\partial h_t} + \frac{\partial \mathcal{L}_{t+1}}{\partial h_t} + \frac{\partial \mathcal{L}_{t+2}}{\partial h_t} + ... + \frac{\partial \mathcal{L}_T}{\partial h_t}$
-
-重新组合：
-$\frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_t} = \frac{\partial \mathcal{L}_t}{\partial h_t} + \underbrace{\left( \frac{\partial \mathcal{L}_{t+1}}{\partial h_{t+1}} + \frac{\partial \mathcal{L}_{t+2}}{\partial h_{t+1}} + ... \right)}_{= \frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_{t+1}}} \cdot \frac{\partial h_{t+1}}{\partial h_t}$
-
-括号里的正是 $\frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_{t+1}}$，它已经包含了从 $t+1$ 到 $T$ 的所有梯度信息。
-
-计算优势：从最后一个时刻开始反向计算，每一步只需计算两项，时间复杂度 $O(T)$ 而非 $O(T^2)$。
-
----
-
-类比：多米诺骨牌
-- $h_t$ 是第一块骨牌
-- 推倒第一块会连锁推倒第二块、第三块...
-- 我们只需要知道"第一块如何推第二块"（$\partial h_{t+1}/\partial h_t$）
-- "第二块及以后的影响"已经包含在 $\partial \mathcal{L}_{\text{seq}}/\partial h_{t+1}$ 中
--->
+> **【讨论：关于梯度求导的深入理解】**
+>
+> **Q:** $\frac{\partial \mathcal{L}_t}{\partial h_t}$ 和 $\frac{\partial \mathcal{L}_{t+N}}{\partial h_{t+N}}$ 有什么区别？
+>
+> **A:** 从函数形式上看，它们完全相同！
+>
+> > $\mathcal{L}_t(h_t) = \ell(\text{softmax}(W_{hy} h_t + b_y), y_t)$  
+> > $\mathcal{L}_{t+N}(h_{t+N}) = \ell(\text{softmax}(W_{hy} h_{t+N} + b_y), y_{t+N})$
+>
+> 两者都是同一个损失函数 $\ell$ 与 softmax、线性变换的复合，只是输入的隐藏状态和真实标签不同。
+>
+> 求导结果的形式完全相同：
+> - $\frac{\partial \mathcal{L}_t}{\partial h_t} = W_{hy}^T (\hat{y}_t - y_t)$
+> - $\frac{\partial \mathcal{L}_{t+N}}{\partial h_{t+N}} = W_{hy}^T (\hat{y}_{t+N} - y_{t+N})$
+>
+> 角标 $t$ 和 $t+N$ 只是标记"在哪个时刻求值"，不改变函数本身的结构。
+>
+> ---
+>
+> **Q:** 那为什么 $\frac{\partial \mathcal{L}_{t+1}}{\partial h_t}$ 和 $\frac{\partial \mathcal{L}_{t+1}}{\partial h_{t+1}}$ 不同？
+>
+> **A:** 关键区别在于"对谁求导"！
+>
+> $\frac{\partial \mathcal{L}_{t+1}}{\partial h_{t+1}}$：直接对 $h_{t+1}$ 求导  
+> $= W_{hy}^T (\hat{y}_{t+1} - y_{t+1})$ （标准形式）
+>
+> $\frac{\partial \mathcal{L}_{t+1}}{\partial h_t}$：对 $h_t$ 求导，需要通过链式法则  
+> $= \frac{\partial \mathcal{L}_{t+1}}{\partial h_{t+1}} \cdot \frac{\partial h_{t+1}}{\partial h_t}$
+>
+> 多了一个雅可比矩阵 $\frac{\partial h_{t+1}}{\partial h_t} = \text{diag}(1-\tanh^2) \cdot W_{hh}$，这就是梯度在时间上递归传播的数学本质。
+>
+> ---
+>
+> **Q:** 为什么公式中只显式出现 $h_{t+1}$，而没有 $h_{t+2}, h_{t+3}, ...$？
+>
+> **A:** 这是递归定义的巧妙之处，既是数学恒等变形，也有实际计算意义。
+>
+> 总梯度展开：  
+> $\frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_t} = \frac{\partial \mathcal{L}_t}{\partial h_t} + \frac{\partial \mathcal{L}_{t+1}}{\partial h_t} + \frac{\partial \mathcal{L}_{t+2}}{\partial h_t} + ... + \frac{\partial \mathcal{L}_T}{\partial h_t}$
+>
+> 重新组合：  
+> $\frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_t} = \frac{\partial \mathcal{L}_t}{\partial h_t} + \underbrace{\left( \frac{\partial \mathcal{L}_{t+1}}{\partial h_{t+1}} + \frac{\partial \mathcal{L}_{t+2}}{\partial h_{t+1}} + ... \right)}_{= \frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_{t+1}}} \cdot \frac{\partial h_{t+1}}{\partial h_t}$
+>
+> 括号里的正是 $\frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_{t+1}}$，它已经包含了从 $t+1$ 到 $T$ 的所有梯度信息。
+>
+> **计算优势**：从最后一个时刻开始反向计算，每一步只需计算两项，时间复杂度 $O(T)$ 而非 $O(T^2)$。
+>
+> ---
+>
+> **类比**：多米诺骨牌
+> - $h_t$ 是第一块骨牌
+> - 推倒第一块会连锁推倒第二块、第三块...
+> - 我们只需要知道"第一块如何推第二块"（$\partial h_{t+1}/\partial h_t$）
+> - "第二块及以后的影响"已经包含在 $\partial \mathcal{L}_{\text{seq}}/\partial h_{t+1}$ 中
 
 **直接梯度：**
 
