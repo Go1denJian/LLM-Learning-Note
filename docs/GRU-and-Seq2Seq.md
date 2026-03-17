@@ -1,482 +1,372 @@
-# GRU 数学原理与 Seq2Seq 架构 —— 从简化门控到注意力机制
+# GRU 数学原理与 Seq2Seq 架构
 
-> **前置知识**：RNN、LSTM、门控机制、Python 基础  
-> **与前面内容的联系**：建议先学习 [RNN-Fundamentals](./RNN-Fundamentals.md) 和 [LSTM-Deep-Dive](./LSTM-Deep-Dive.md)，理解递归网络和门控机制  
-> **与后续内容的联系**：GRU 是 LSTM 的高效替代，Seq2Seq 是 Transformer 的雏形，注意力机制是 Transformer 的核心
+> **前置知识**：RNN 基础、LSTM 门控机制
+> **学习目标**：理解 GRU 的简化设计、Seq2Seq 架构、注意力机制原理
 
 ---
 
 ## 目录
 
-1. [GRU：LSTM 的精简版](#1-grulstm-的精简版)
-   - 1.1 [为什么需要 GRU？](#11-为什么需要-gru)
-   - 1.2 [GRU 的数学表达](#12-gru-的数学表达)
-2. [为什么 GRU 能保持 LSTM 的能力](#2-为什么-gru-能保持-lstm-的能力)
-3. [Seq2Seq 架构](#3-seq2seq-架构)
-   - 3.1 [Encoder-Decoder 结构](#31-encoder-decoder-结构)
-   - 3.2 [Teacher Forcing](#32-teacher-forcing)
-4. [注意力机制初步](#4-注意力机制初步)
-   - 4.1 [Seq2Seq 的局限性](#41-seq2seq-的局限性)
-   - 4.2 [注意力机制的直觉](#42-注意力机制的直觉)
-5. [从数学到代码：完整实现](#5-从数学到代码完整实现)
-   - 5.1 [GRU NumPy 实现](#51-gru-numpy-实现)
-   - 5.2 [Seq2Seq PyTorch 实现](#52-seq2seq-pytorch-实现)
-6. [练习与思考题](#6-练习与思考题)
+1. [引言：为什么需要 GRU？](#1-引言为什么需要-gru)
+2. [GRU 的数学表达](#2-gru-的数学表达)
+3. [核心算法：门控机制](#3-核心算法门控机制)
+4. [梯度推导与参数更新](#4-梯度推导与参数更新)
+5. [训练优化方法总结](#5-训练优化方法总结)
+6. [从数学到代码：完整实现](#6-从数学到代码完整实现)
+7. [Seq2Seq 架构](#7-seq2seq-架构)
+8. [注意力机制初步](#8-注意力机制初步)
+9. [扩展阅读与实现](#扩展阅读与实现)
+10. [参考资源](#参考资源)
+附录：[符号表](#附录符号表)
 
 ---
 
-## 1. GRU：LSTM 的精简版
+## 1. 引言：为什么需要 GRU？
 
-### 1.1 为什么需要 GRU？
+### 1.1 LSTM 的局限性
 
-**LSTM 的问题：**
+**问题**：
 - 参数量大（约 4 倍于 RNN）
 - 计算复杂度高
 - 训练时间长
 
-**GRU 的设计目标：**
+### 1.2 GRU 的设计目标
+
 - 保持 LSTM 捕捉长期依赖的能力
-- 减少参数量
+- 减少参数量（约 3 倍于 RNN）
 - 简化计算
-
-### 1.2 GRU 架构
-
-GRU 将 LSTM 的 4 个门合并为 2 个门：
-
-```
-        ┌─────────────────────────────────┐
-        │           GRU Cell              │
-        │                                 │
-  xₜ ──→│  ┌─────────┐   ┌─────────┐     │
-        │  │ Reset   │   │ Update  │     │
 
 ---
 
-## 1. GRU：LSTM的精简版
+## 2. GRU 的数学表达
 
-### 1.1 为什么需要GRU？
+### 2.1 门控机制
 
-**LSTM的问题：**
-- 参数量大（约4倍于RNN）
-- 计算复杂度高
-- 训练时间长
+GRU 将 LSTM 的 4 个门合并为 2 个门：
 
-**GRU的设计目标：**
-- 保持LSTM捕捉长期依赖的能力
-- 减少参数量
-- 简化计算
-
-### 1.2 GRU架构
-
-GRU将LSTM的4个门合并为2个门：
-
-```
-        ┌─────────────────────────────────┐
-        │           GRU Cell              │
-        │                                 │
-  xₜ ──→│  ┌─────────┐   ┌─────────┐     │
-        │  │ Reset   │   │ Update  │     │
-        │  │  Gate   │   │  Gate   │     │
-        │  │  (rₜ)   │   │  (zₜ)   │     │
-        │  └────┬────┘   └────┬────┘     │
-        │       │             │          │
-        │       ▼             ▼          │
-   hₜ₋₁→│    [×]            [1-z]       │
-        │       │               │        │
-        │       ▼               ▼        │
-        │    [tanh]          [×]←──hₜ₋₁  │
-        │       │               │        │
-        │       └──→[+]←────────┘        │
-        │              │                 │
-        │              ▼                 │
-        │             hₜ                 │
-        └─────────────────────────────────┘
-```
-
-### 1.3 数学公式
-
-**1. 重置门 (Reset Gate)**
-
-决定遗忘多少过去的信息：
-
+**重置门（Reset Gate）**：
 $$
-r_t = \sigma(W_r \cdot [h_{t-1}, x_t])
+r_t = \sigma(W_{xr} x_t + W_{hr} h_{t-1} + b_r)
 $$
 
-**2. 更新门 (Update Gate)**
-
-决定保留多少旧状态，接受多少新状态：
-
+**更新门（Update Gate）**：
 $$
-z_t = \sigma(W_z \cdot [h_{t-1}, x_t])
+z_t = \sigma(W_{xz} x_t + W_{hz} h_{t-1} + b_z)
 $$
 
-**3. 候选隐藏状态**
-
+**候选隐藏状态**：
 $$
-\tilde{h}_t = \tanh(W \cdot [r_t \odot h_{t-1}, x_t])
+\tilde{h}_t = \tanh(W_{xh} x_t + W_{hh} (r_t \odot h_{t-1}) + b_h)
 $$
 
-**4. 最终隐藏状态**
-
+**隐藏状态更新**：
 $$
 h_t = (1 - z_t) \odot h_{t-1} + z_t \odot \tilde{h}_t
 $$
 
-### 1.4 GRU vs LSTM 对比
+### 2.2 与 LSTM 的对比
 
 | 特性 | LSTM | GRU |
 |------|------|-----|
-| 门数量 | 3个 (f, i, o) | 2个 (r, z) |
-| 状态变量 | $h_t$ + $C_t$ | 只有 $h_t$ |
-| 参数量 | 约 $4n^2$ | 约 $3n^2$ |
-| 计算速度 | 较慢 | 较快 |
-| 长期依赖 | 强 | 较强 |
+| 门数量 | 3个（输入/遗忘/输出） | 2个（重置/更新） |
+| 参数量 | 约 4 倍 RNN | 约 3 倍 RNN |
+| 细胞状态 | 有 | 无（合并到隐藏状态） |
+| 输出门 | 有 | 无 |
 
-**直观理解：**
-- **更新门 z**：相当于LSTM的遗忘门 + 输入门
-  - $z \approx 1$：保留旧状态（类似遗忘门≈1，输入门≈0）
-  - $z \approx 0$：接受新状态（类似遗忘门≈0，输入门≈1）
-- **重置门 r**：控制过去信息对候选状态的影响
-  - $r \approx 0$：完全忽略过去，只依赖当前输入
-  - $r \approx 1$：充分利用过去信息
+---
 
-### 1.5 PyTorch实现
+## 3. 核心算法：门控机制
+
+### 3.1 重置门的作用
+
+**功能**：控制前一时刻隐藏状态的信息流入
+
+**直觉**：
+- $r_t \approx 0$：忽略历史，关注当前输入
+- $r_t \approx 1$：保留历史，类似 RNN
+
+### 3.2 更新门的作用
+
+**功能**：控制新信息与旧信息的混合比例
+
+**直觉**：
+- $z_t \approx 0$：保持旧状态（$h_t \approx h_{t-1}$）
+- $z_t \approx 1$：接受新状态（$h_t \approx \tilde{h}_t$）
+
+---
+
+## 4. 梯度推导与参数更新
+
+### 4.1 输出层梯度
+
+$$
+\frac{\partial \mathcal{L}_t}{\partial W_{hy}} = (\hat{y}_t - y_t) \cdot h_t^T
+$$
+
+### 4.2 隐藏层梯度
+
+**对 $h_t$ 的梯度**：
+
+$$
+\frac{\partial \mathcal{L}}{\partial h_t} = W_{hy}^T (\hat{y}_t - y_t) + \frac{\partial \mathcal{L}}{\partial h_{t+1}} \cdot \frac{\partial h_{t+1}}{\partial h_t}
+$$
+
+**其中**：
+
+$$
+\frac{\partial h_{t+1}}{\partial h_t} = (1 - z_{t+1}) + \frac{\partial \tilde{h}_{t+1}}{\partial h_t} \cdot z_{t+1}
+$$
+
+### 4.3 门控梯度
+
+**更新门梯度**：
+
+$$
+\frac{\partial \mathcal{L}}{\partial z_t} = \frac{\partial \mathcal{L}}{\partial h_t} \odot (\tilde{h}_t - h_{t-1})
+$$
+
+**重置门梯度**：
+
+$$
+\frac{\partial \mathcal{L}}{\partial r_t} = \frac{\partial \mathcal{L}}{\partial \tilde{h}_t} \odot (W_{hh}^T \cdot h_{t-1}) \odot (1 - \tanh^2(\cdot))
+$$
+
+---
+
+## 5. 训练优化方法总结
+
+### 5.1 梯度问题
+
+| 问题 | 原因 | 解决方案 |
+|------|------|---------|
+| 梯度消失 | 更新门 $z_t \approx 0$ | 门控初始化优化 |
+| 梯度爆炸 | 连乘效应 | 梯度裁剪 |
+
+### 5.2 优化策略
+
+- **门控初始化**：使用较小初始值（如 0.1）
+- **梯度裁剪**：限制梯度范数
+- **学习率调整**：使用 Adam 优化器
+
+---
+
+## 6. 从数学到代码：完整实现
+
+### 6.1 NumPy 实现
+
+```python
+import numpy as np
+
+class GRU:
+    def __init__(self, input_size, hidden_size, output_size):
+        # 重置门参数
+        self.W_xr = np.random.randn(hidden_size, input_size) * 0.01
+        self.W_hr = np.random.randn(hidden_size, hidden_size) * 0.01
+        self.b_r = np.zeros((hidden_size, 1))
+        
+        # 更新门参数
+        self.W_xz = np.random.randn(hidden_size, input_size) * 0.01
+        self.W_hz = np.random.randn(hidden_size, hidden_size) * 0.01
+        self.b_z = np.zeros((hidden_size, 1))
+        
+        # 候选状态参数
+        self.W_xh = np.random.randn(hidden_size, input_size) * 0.01
+        self.W_hh = np.random.randn(hidden_size, hidden_size) * 0.01
+        self.b_h = np.zeros((hidden_size, 1))
+        
+        # 输出层参数
+        self.W_hy = np.random.randn(output_size, hidden_size) * 0.01
+        self.b_y = np.zeros((output_size, 1))
+        
+        self.hidden_size = hidden_size
+    
+    def forward(self, x, h_prev):
+        """前向传播"""
+        # 重置门
+        r = 1 / (1 + np.exp(-(self.W_xr @ x + self.W_hr @ h_prev + self.b_r)))
+        
+        # 更新门
+        z = 1 / (1 + np.exp(-(self.W_xz @ x + self.W_hz @ h_prev + self.b_z)))
+        
+        # 候选隐藏状态
+        h_tilde = np.tanh(self.W_xh @ x + self.W_hh @ (r * h_prev) + self.b_h)
+        
+        # 隐藏状态
+        h = (1 - z) * h_prev + z * h_tilde
+        
+        # 输出
+        y = self.W_hy @ h + self.b_y
+        
+        return y, h, (r, z, h_tilde, h_prev, x)
+    
+    def backward(self, dy, dh_next, cache):
+        """反向传播"""
+        r, z, h_tilde, h_prev, x = cache
+        
+        # 输出层梯度
+        dW_hy = dy @ h_prev.T
+        db_y = dy
+        dh = self.W_hy.T @ dy + dh_next
+        
+        # 门控梯度
+        dz = dh * (h_tilde - h_prev)
+        dh_tilde = dh * z
+        dh_prev = dh * (1 - z)
+        
+        # 候选状态梯度
+        dh_tilde_raw = dh_tilde * (1 - h_tilde ** 2)
+        dW_xh = dh_tilde_raw @ x.T
+        dW_hh = dh_tilde_raw @ (r * h_prev).T
+        
+        return dW_hy, db_y, dW_xh, dW_hh
+```
+
+### 6.2 PyTorch 实现
 
 ```python
 import torch
 import torch.nn as nn
 
 class GRUModel(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, output_size):
+    def __init__(self, input_size, hidden_size, output_size):
         super().__init__()
         self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        
-        self.gru = nn.GRU(
-            input_size=input_size,
-            hidden_size=hidden_size,
-            num_layers=num_layers,
-            batch_first=True,
-            dropout=0.2 if num_layers > 1 else 0
-        )
-        
+        self.gru = nn.GRU(input_size, hidden_size, batch_first=True)
         self.fc = nn.Linear(hidden_size, output_size)
     
     def forward(self, x):
-        # x: (batch, seq_len, input_size)
-        gru_out, hidden = self.gru(x)
-        # gru_out: (batch, seq_len, hidden_size)
-        
-        last_hidden = gru_out[:, -1, :]
-        output = self.fc(last_hidden)
-        
-        return output
+        out, hidden = self.gru(x)
+        out = self.fc(out)
+        return out, hidden
 
-# 对比参数量
-lstm = nn.LSTM(input_size=100, hidden_size=128, num_layers=1)
-gru = nn.GRU(input_size=100, hidden_size=128, num_layers=1)
-
-lstm_params = sum(p.numel() for p in lstm.parameters())
-gru_params = sum(p.numel() for p in gru.parameters())
-
-print(f"LSTM参数: {lstm_params}")   # 约118k
-print(f"GRU参数: {gru_params}")     # 约88k (约75%)
-```
-
-### 1.6 实验对比
-
-在多个NLP任务上的性能对比：
-
-| 任务 | LSTM | GRU | 结论 |
-|------|------|-----|------|
-| 语言建模 | 78.4 PPL | 79.2 PPL | 相当 |
-| 机器翻译 | 24.5 BLEU | 24.1 BLEU | 相当 |
-| 情感分析 | 87.2% Acc | 86.8% Acc | 相当 |
-| 训练时间 | 100% | 75% | GRU更快 |
-
-**结论**：GRU在保持性能的同时，训练更快，参数量更少。
-
----
-
-## 2. Seq2Seq：序列到序列学习
-
-### 2.1 问题背景
-
-**传统RNN/LSTM的局限：**
-- 输入输出长度必须相同
-- 只能处理单序列任务
-
-**Seq2Seq解决：**
-- 输入输出长度可以不同
-- 适用于翻译、摘要、对话等任务
-
-### 2.2 架构概览
-
-```
-Encoder（编码器）          Decoder（解码器）
-
-"Hello" → [E] ──┐
-"World" → [E] ──┼→ LSTM → LSTM → LSTM → [Context]
-"!"     → [E] ──┘         ↑
-                          │
-                    [Context Vector]
-                          │
-                          ↓
-                    [Start] → LSTM → "Bonjour"
-                                ↓
-                              LSTM → "le"
-                                ↓
-                              LSTM → "monde"
-                                ↓
-                              LSTM → "!"
-                                ↓
-                             [End]
-```
-
-### 2.3 Encoder（编码器）
-
-将输入序列编码为固定长度的上下文向量：
-
-```python
-class Encoder(nn.Module):
-    def __init__(self, input_size, hidden_size):
-        super().__init__()
-        self.hidden_size = hidden_size
-        self.embedding = nn.Embedding(input_size, hidden_size)
-        self.lstm = nn.LSTM(hidden_size, hidden_size, batch_first=True)
-    
-    def forward(self, input_seq):
-        # input_seq: (batch, seq_len)
-        embedded = self.embedding(input_seq)  # (batch, seq_len, hidden)
-        
-        # outputs: (batch, seq_len, hidden)
-        # hidden: (num_layers, batch, hidden)
-        # cell: (num_layers, batch, hidden)
-        outputs, (hidden, cell) = self.lstm(embedded)
-        
-        return outputs, (hidden, cell)
-```
-
-### 2.4 Decoder（解码器）
-
-根据上下文向量生成输出序列：
-
-```python
-class Decoder(nn.Module):
-    def __init__(self, output_size, hidden_size):
-        super().__init__()
-        self.hidden_size = hidden_size
-        self.output_size = output_size
-        
-        self.embedding = nn.Embedding(output_size, hidden_size)
-        self.lstm = nn.LSTM(hidden_size, hidden_size, batch_first=True)
-        self.fc = nn.Linear(hidden_size, output_size)
-    
-    def forward(self, input_token, hidden, cell):
-        # input_token: (batch, 1) - 单个词
-        # hidden, cell: 来自encoder或上一步decoder
-        
-        embedded = self.embedding(input_token)  # (batch, 1, hidden)
-        
-        output, (hidden, cell) = self.lstm(embedded, (hidden, cell))
-        # output: (batch, 1, hidden)
-        
-        prediction = self.fc(output.squeeze(1))  # (batch, output_size)
-        
-        return prediction, hidden, cell
-```
-
-### 2.5 完整Seq2Seq模型
-
-```python
-class Seq2Seq(nn.Module):
-    def __init__(self, encoder, decoder, device):
-        super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
-        self.device = device
-    
-    def forward(self, src, trg, teacher_forcing_ratio=0.5):
-        # src: (batch, src_len)
-        # trg: (batch, trg_len)
-        
-        batch_size = src.shape[0]
-        trg_len = trg.shape[1]
-        trg_vocab_size = self.decoder.output_size
-        
-        # 存储所有输出
-        outputs = torch.zeros(batch_size, trg_len, trg_vocab_size).to(self.device)
-        
-        # Encoder
-        _, (hidden, cell) = self.encoder(src)
-        
-        # Decoder的第一个输入是 <SOS> token
-        input_token = trg[:, 0]  # (batch,)
-        
-        for t in range(1, trg_len):
-            output, hidden, cell = self.decoder(input_token.unsqueeze(1), hidden, cell)
-            outputs[:, t, :] = output
-            
-            # Teacher Forcing
-            teacher_force = torch.rand(1).item() < teacher_forcing_ratio
-            top1 = output.argmax(1)  # 预测的词
-            input_token = trg[:, t] if teacher_force else top1
-        
-        return outputs
-```
-
-### 2.6 Teacher Forcing
-
-**问题：** 如果decoder在第一步预测错误，错误会传播到后续所有步骤
-
-**解决方案：** 训练时有一定概率使用真实标签作为下一步输入
-
-```python
-# Teacher Forcing 示例
-for t in range(trg_len):
-    if random.random() < teacher_forcing_ratio:
-        input_token = trg[:, t]      # 使用真实标签（老师指导）
-    else:
-        input_token = prev_output    # 使用模型预测（自主学习）
+# 使用示例
+model = GRUModel(input_size=100, hidden_size=128, output_size=10000)
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 ```
 
 ---
 
-## 3. 注意力机制初步
+## 7. Seq2Seq 架构
 
-### 3.1 Seq2Seq的瓶颈
+### 7.1 Encoder-Decoder 结构
 
-**问题：** 所有信息被压缩到一个固定长度的上下文向量
+**编码器（Encoder）**：
+- 将输入序列压缩为上下文向量
+- 使用 RNN/GRU/LSTM
 
-```
-"The cat sat on the mat and looked at the bird"
-                    ↓
-              [Context Vector]
-                    ↓
-         "Le chat s'est assis sur le tapis"
-         
-问题：长句子时，信息丢失严重
-```
-
-### 3.2 注意力机制的核心思想
-
-**关键洞察：** Decoder在生成每个词时，应该关注Encoder的不同部分
+**解码器（Decoder）**：
+- 根据上下文向量生成输出序列
+- 使用 RNN/GRU/LSTM
 
 ```
-生成 "chat" 时 → 关注 "cat"
-生成 "tapis" 时 → 关注 "mat"
+输入序列: [x₁, x₂, x₃] → Encoder → 上下文向量 c → Decoder → [y₁, y₂, y₃, y₄]
 ```
 
-### 3.3 注意力计算流程
+### 7.2 Teacher Forcing
 
-```
-Step 1: 计算注意力分数
-        score(s_t, h_i) = s_t^T · h_i
-        
-Step 2: 归一化为注意力权重
-        α_i = softmax(score_i)
-        
-Step 3: 计算上下文向量
-        c_t = Σ α_i · h_i
-        
-Step 4: 结合上下文生成输出
-        output = f(c_t, s_t)
-```
+**训练时**：使用真实标签作为下一时刻输入
+**推理时**：使用模型预测作为下一时刻输入
 
-### 3.4 可视化理解
+---
 
-```
-Encoder Outputs:  [h₁]  [h₂]  [h₃]  [h₄]  [h₅]
-                    ↓     ↓     ↓     ↓     ↓
-Attention Weights: 0.1   0.1   0.6   0.1   0.1  (生成"cat"时)
-                    ↓     ↓     ↓     ↓     ↓
-Context Vector:    c_t = 0.1h₁ + 0.1h₂ + 0.6h₃ + 0.1h₄ + 0.1h₅
-                          ↑
-                      主要关注h₃
-```
+## 8. 注意力机制初步
 
-### 3.5 注意力机制的优势
+### 8.1 Seq2Seq 的局限性
 
-1. **解决长距离依赖**：直接访问所有encoder状态
-2. **可解释性**：注意力权重显示模型关注哪里
-3. **并行计算**：注意力可以并行计算
+**信息瓶颈**：所有信息压缩到固定长度向量
 
-### 3.6 注意力类型概览
+### 8.2 注意力机制的直觉
 
-| 类型 | 名称 | 特点 |
+**核心思想**：解码器在生成每个词时"关注"编码器的不同部分
+
+**注意力权重**：
+$$
+\alpha_{ij} = \frac{\exp(e_{ij})}{\sum_k \exp(e_{ik})}
+$$
+
+其中 $e_{ij}$ 是解码器状态 $s_i$ 与编码器状态 $h_j$ 的相似度。
+
+---
+
+## 9. 扩展阅读与实现
+
+### 问题 1：GRU 与 LSTM 的参数对比
+
+**问题**：计算 GRU 和 LSTM 的参数数量。
+
+**解答**：
+
+**LSTM 参数量**：
+- 4 个门 × (输入权重 + 隐藏权重 + 偏置)
+- $4 \times (d_{in} \cdot d_{hidden} + d_{hidden} \cdot d_{hidden} + d_{hidden})$
+
+**GRU 参数量**：
+- 3 个门 × (输入权重 + 隐藏权重 + 偏置)
+- $3 \times (d_{in} \cdot d_{hidden} + d_{hidden} \cdot d_{hidden} + d_{hidden})$
+
+**结论**：GRU 参数量约为 LSTM 的 75%。
+
+---
+
+### 问题 2：门控初始化对梯度的影响
+
+**问题**：为什么门控需要较小的初始值？
+
+**解答**：
+
+**分析**：
+- 初始化 $z_t \approx 0.5$
+- 如果初始化过大，$z_t \approx 1$，网络退化为标准 RNN
+- 如果初始化过小，$z_t \approx 0$，网络无法学习新信息
+
+**工程建议**：
+- 使用 $U(-0.1, 0.1)$ 均匀分布初始化
+- 或使用 Xavier/Glorot 初始化
+
+---
+
+### 问题 3：注意力机制的计算复杂度
+
+**问题**：分析 Seq2Seq + Attention 的计算复杂度。
+
+**解答**：
+
+**标准 Seq2Seq**：$O(T_{enc} + T_{dec})$
+
+**Seq2Seq + Attention**：$O(T_{enc} \cdot T_{dec})$
+
+**结论**：注意力机制增加了计算量，但解决了信息瓶颈问题。
+
+---
+
+## 10. 参考资源
+
+### 经典论文
+
+1. Cho, K., et al. (2014). [Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation](https://arxiv.org/abs/1406.1078). EMNLP 2014.
+   - **贡献**：GRU 和 Seq2Seq 的原始论文
+
+2. Chung, J., et al. (2014). [Empirical Evaluation of Gated Recurrent Neural Networks on Sequence Modeling](https://arxiv.org/abs/1412.3555). NIPS 2014 Workshop.
+   - **贡献**：GRU 与 LSTM 的对比实验
+
+3. Bahdanau, D., et al. (2015). [Neural Machine Translation by Jointly Learning to Align and Translate](https://arxiv.org/abs/1409.0473). ICLR 2015.
+   - **贡献**：注意力机制的原始论文
+
+### 在线资源
+
+4. [PyTorch GRU Documentation](https://pytorch.org/docs/stable/generated/torch.nn.GRU.html)
+5. [Seq2Seq with Attention Tutorial](https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html)
+
+---
+
+## 附录：符号表
+
+| 符号 | 含义 | 维度 |
 |------|------|------|
-| Soft Attention | 软注意力 | 加权平均，可微分 |
-| Hard Attention | 硬注意力 | 选择单一位置，需强化学习 |
-| Self-Attention | 自注意力 | 序列对自身计算注意力 |
-| Multi-Head | 多头注意力 | 多组注意力并行计算 |
-
-**注意**：详细注意力机制将在后续阶段（Transformer）深入学习。
-
----
-
-## 4. 总结与展望
-
-### 4.1 本阶段要点
-
-| 主题 | 核心内容 |
-|------|----------|
-| **GRU** | LSTM的简化版，2个门控，参数更少，速度更快 |
-| **Seq2Seq** | Encoder-Decoder架构，处理变长序列转换 |
-| **注意力** | 解决信息瓶颈，实现选择性关注 |
-
-### 4.2 架构演进
-
-```
-RNN (1986)
-  ↓
-LSTM (1997) ← 解决梯度消失
-  ↓
-GRU (2014) ← 简化LSTM
-  ↓
-Seq2Seq (2014) ← 序列转换
-  ↓
-Attention (2014) ← 选择性关注
-  ↓
-Transformer (2017) ← 完全并行 + 自注意力 ← 现代LLM基础
-```
-
-### 4.3 下一步学习
-
-1. **Transformer架构**：Self-Attention、Multi-Head Attention、Position Encoding
-2. **预训练语言模型**：BERT、GPT系列
-3. **大语言模型**：Scaling Law、RLHF、Prompt Engineering
-
-### 4.4 学习路径总览
-
-```
-Stage 1: Word2Vec/GloVe ──┐
-Stage 2: FastText ────────┼→ 词嵌入基础
-Stage 3: Embedding对比 ───┘
-Stage 4: RNN基础 ─────────┐
-Stage 5: LSTM ────────────┼→ 序列建模
-Stage 6: GRU + Seq2Seq ───┘
-Stage 7: Transformer ←─── 当前前沿基础
-Stage 8: BERT/GPT
-Stage 9: 大模型训练与应用
-```
-
----
-
-## 参考资源
-
-1. **论文**：
-   - "Learning Phrase Representations using RNN Encoder-Decoder" (Cho et al., 2014) - GRU
-   - "Sequence to Sequence Learning with Neural Networks" (Sutskever et al., 2014) - Seq2Seq
-   - "Neural Machine Translation by Jointly Learning to Align and Translate" (Bahdanau et al., 2015) - Attention
-
-2. **教程**：
-   - PyTorch Seq2Seq Tutorial
-   - Harvard NLP: The Annotated Transformer
-
-3. **可视化**：
-   - https://jalammar.github.io/visualizing-neural-machine-translation-mechanics-of-seq2seq-models-with-attention/
-
----
-
-*Created: 2026-03-16 | Stage 6 of LLM Learning Roadmap (Final Stage)*
+| $x_t$ | 时刻 $t$ 的输入 | $(d_{in}, 1)$ |
+| $h_t$ | 时刻 $t$ 的隐藏状态 | $(d_{hidden}, 1)$ |
+| $\tilde{h}_t$ | 候选隐藏状态 | $(d_{hidden}, 1)$ |
+| $r_t$ | 重置门输出 | $(d_{hidden}, 1)$ |
+| $z_t$ | 更新门输出 | $(d_{hidden}, 1)$ |
+| $W_{xr}, W_{hr}$ | 重置门权重 | $(d_{hidden}, d_{in})$, $(d_{hidden}, d_{hidden
