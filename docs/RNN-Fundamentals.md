@@ -133,25 +133,55 @@ x₁ → [RNN] → h₁ → [RNN] → h₂ → [RNN] → h₃ → ... → h_T
 
 ### 3.1 损失函数定义
 
-对于序列任务，总损失是各时刻损失的累加：
+#### 符号约定（重要）
+
+为了清晰区分不同层次的损失，本文档使用以下约定：
+
+| 符号 | 名称 | 定义 | 说明 |
+|------|------|------|------|
+| $\ell(\hat{y}, y)$ | **损失函数** | $\ell: \mathbb{R}^{d_{out}} \times \mathbb{R}^{d_{out}} \rightarrow \mathbb{R}$ | 函数本身，输入为预测值和真实值 |
+| $\mathcal{L}_t$ | **时刻 $t$ 的局部损失** | $\mathcal{L}_t = \ell(\hat{y}_t, y_t)$ | 第 $t$ 个时间步的损失**标量值** |
+| $\mathcal{L}_{\text{seq}}$ | **序列总损失** | $\mathcal{L}_{\text{seq}} = \sum_{t=1}^{T} \mathcal{L}_t$ | 单个序列所有时刻损失之和 |
+
+**关键理解**：
+- $\ell(\cdot, \cdot)$ 是**函数**（映射规则）
+- $\mathcal{L}_t$ 和 $\mathcal{L}_{\text{seq}}$ 是**标量值**（具体数值）
+- 下角标 $t$ 表示**时间步位置**，不是函数参数
+
+#### 损失函数的显式定义
+
+以交叉熵损失为例，损失函数的完整定义为：
 
 $$
-\mathcal{L} = \sum_{t=1}^{T} \mathcal{L}_t = \sum_{t=1}^{T} \text{loss}(y_t, \hat{y}_t)
+\ell(\hat{y}, y) = -\sum_{i=1}^{d_{out}} y_i \log(\hat{y}_i)
 $$
 
-**具体例子：交叉熵损失（用于分类任务）**
+其中：
+- 输入 $\hat{y} \in \mathbb{R}^{d_{out}}$：模型预测的概率分布（softmax输出）
+- 输入 $y \in \mathbb{R}^{d_{out}}$：真实标签（one-hot向量）
+- 输出：标量损失值
 
-假设我们在做词预测，词汇表大小为 V，真实标签是 one-hot 向量 $y_t$（只有正确词的位置为1，其余为0）：
+#### 各时刻局部损失
+
+对于序列中的第 $t$ 个时间步：
 
 $$
-\mathcal{L}_t = -\sum_{i=1}^{V} y_{t,i} \cdot \log(\hat{y}_{t,i})
+\mathcal{L}_t = \ell(\hat{y}_t, y_t) = -\sum_{i=1}^{d_{out}} y_{t,i} \log(\hat{y}_{t,i})
 $$
 
-由于 $y_t$ 是 one-hot，只有一个位置为1（假设是位置 k）：
+由于 $y_t$ 是 one-hot（只有正确类别位置为1）：
 
 $$
-\mathcal{L}_t = -\log(\hat{y}_{t,k})
+\mathcal{L}_t = -\log(\hat{y}_{t, k}) \quad \text{（其中 $k$ 是正确类别索引）}
 $$
+
+#### 序列总损失
+
+$$
+\mathcal{L}_{\text{seq}} = \sum_{t=1}^{T} \mathcal{L}_t = \sum_{t=1}^{T} \ell(\hat{y}_t, y_t)
+$$
+
+**注意**：在后续推导中，为简洁起见，我们用 $\mathcal{L}$ 表示 $\mathcal{L}_{\text{seq}}$（序列总损失）。
 
 <!-- 
 为什么叫"交叉熵"？
@@ -310,44 +340,56 @@ $$
 $$
 
 <!--
-$\mathcal{L}$ vs $\mathcal{L}_t$ 的区别，以及为什么只推导到 $h_{t+1}$
+关键理解：$\mathcal{L}_t$ 与 $\mathcal{L}$ 的求导区别
 
-符号区别：
-- $\mathcal{L}_t$：仅时刻 $t$ 的局部损失（当前时刻的预测误差）
-- $\mathcal{L} = \sum_{k=1}^{T} \mathcal{L}_k$：整个序列的总损失（所有时刻损失之和）
+首先明确函数定义：
+- 损失函数 $\ell(\hat{y}, y)$ 是固定的函数（如交叉熵）
+- $\mathcal{L}_t = \ell(\hat{y}_t, y_t)$ 是函数在时刻 $t$ 的取值
+- $\mathcal{L} = \sum_{k=1}^{T} \mathcal{L}_k$ 是所有时刻损失之和
 
-为什么 $\frac{\partial \mathcal{L}}{\partial h_t}$ 包含未来时刻的梯度？
+为什么 $\frac{\partial \mathcal{L}_t}{\partial h_t}$ 和 $\frac{\partial \mathcal{L}_{t+1}}{\partial h_t}$ 不同？
 
-因为 $h_t$ 通过递归连接影响所有未来时刻的隐藏状态：
-h_t → h_{t+1} → h_{t+2} → ... → h_T
-      ↓         ↓              ↓
-      L_{t+1}   L_{t+2}       L_T
+因为虽然使用相同的损失函数 $\ell$，但输入不同：
+- $\mathcal{L}_t$ 依赖于 $\hat{y}_t$，而 $\hat{y}_t$ 依赖于 $h_t$
+- $\mathcal{L}_{t+1}$ 依赖于 $\hat{y}_{t+1}$，而 $\hat{y}_{t+1}$ 依赖于 $h_{t+1}$，$h_{t+1}$ 又依赖于 $h_t$
 
-所以：
+具体展开：
+
+$\mathcal{L}_t = \ell(\hat{y}_t, y_t) = \ell(\text{softmax}(W_{hy} h_t + b_y), y_t)$
+
+$\mathcal{L}_{t+1} = \ell(\hat{y}_{t+1}, y_{t+1}) = \ell(\text{softmax}(W_{hy} h_{t+1} + b_y), y_{t+1})$
+其中 $h_{t+1} = \tanh(W_{hh} h_t + W_{xh} x_{t+1} + b_h)$
+
+所以对 $h_t$ 求导：
+
+$\frac{\partial \mathcal{L}_t}{\partial h_t} = \frac{\partial \ell}{\partial \hat{y}_t} \cdot \frac{\partial \hat{y}_t}{\partial h_t}$
+
+$\frac{\partial \mathcal{L}_{t+1}}{\partial h_t} = \frac{\partial \ell}{\partial \hat{y}_{t+1}} \cdot \frac{\partial \hat{y}_{t+1}}{\partial h_{t+1}} \cdot \frac{\partial h_{t+1}}{\partial h_t}$
+
+$\frac{\partial \mathcal{L}_{t+2}}{\partial h_t} = \frac{\partial \ell}{\partial \hat{y}_{t+2}} \cdot \frac{\partial \hat{y}_{t+2}}{\partial h_{t+2}} \cdot \frac{\partial h_{t+2}}{\partial h_{t+1}} \cdot \frac{\partial h_{t+1}}{\partial h_t}$
+
+...
+
+总梯度：
 $\frac{\partial \mathcal{L}}{\partial h_t} = \frac{\partial \mathcal{L}_t}{\partial h_t} + \frac{\partial \mathcal{L}_{t+1}}{\partial h_t} + \frac{\partial \mathcal{L}_{t+2}}{\partial h_t} + ... + \frac{\partial \mathcal{L}_T}{\partial h_t}$
 
-为什么公式中只出现 $h_{t+1}$，而没有 $h_{t+2}, h_{t+3}, ...$？
+为什么公式中只显式出现 $h_{t+1}$？
 
-这是递归定义的巧妙之处！我们不需要显式写出所有未来时刻，因为：
+因为使用递归定义：
+$\frac{\partial \mathcal{L}}{\partial h_t} = \frac{\partial \mathcal{L}_t}{\partial h_t} + \frac{\partial \mathcal{L}}{\partial h_{t+1}} \cdot \frac{\partial h_{t+1}}{\partial h_t}$
 
-1. $\frac{\partial \mathcal{L}}{\partial h_{t+1}}$ 已经包含了从 $t+1$ 到 $T$ 的所有梯度信息
-2. 通过递归展开：
-   ∂L/∂h_t = ∂L_t/∂h_t + (∂L/∂h_{t+1}) · (∂h_{t+1}/∂h_t)
-   
-   而 ∂L/∂h_{t+1} = ∂L_{t+1}/∂h_{t+1} + (∂L/∂h_{t+2}) · (∂h_{t+2}/∂h_{t+1})
-   
-   代入得：
-   ∂L/∂h_t = ∂L_t/∂h_t + [∂L_{t+1}/∂h_{t+1} + (∂L/∂h_{t+2})·(∂h_{t+2}/∂h_{t+1})] · (∂h_{t+1}/∂h_t)
-   
-   = ∂L_t/∂h_t + ∂L_{t+1}/∂h_{t+1}·(∂h_{t+1}/∂h_t) + ∂L/∂h_{t+2}·(∂h_{t+2}/∂h_{t+1})·(∂h_{t+1}/∂h_t)
-   
-   = ...（继续展开直到 T）
+其中 $\frac{\partial \mathcal{L}}{\partial h_{t+1}}$ 已经包含了 $\mathcal{L}_{t+1}, \mathcal{L}_{t+2}, ..., \mathcal{L}_T$ 对 $h_{t+1}$ 的所有梯度。
 
-3. 这就是链式法则的递归应用：每一层梯度只关心"下一层"，但最终会传播到所有未来时刻。
+递归展开：
+$\frac{\partial \mathcal{L}}{\partial h_{t+1}} = \frac{\partial \mathcal{L}_{t+1}}{\partial h_{t+1}} + \frac{\partial \mathcal{L}}{\partial h_{t+2}} \cdot \frac{\partial h_{t+2}}{\partial h_{t+1}}$
 
-类比理解：
-就像多米诺骨牌：推倒第一块（$h_t$），它会推倒第二块（$h_{t+1}$），第二块再推倒第三块（$h_{t+2}$）...
-我们只需要知道"当前块如何影响下一块"（$\partial h_{t+1}/\partial h_t$），不需要直接知道"当前块如何影响第十块"，因为影响会通过递归传递。
+代入后即可得到完整展开式。
+
+类比：多米诺骨牌
+- $h_t$ 是第一块骨牌
+- 推倒第一块会连锁推倒第二块、第三块...
+- 我们只需要知道"第一块如何推第二块"（$\partial h_{t+1}/\partial h_t$）
+- "第二块及以后的影响"已经包含在 $\partial \mathcal{L}/\partial h_{t+1}$ 中
 -->
 
 **直接梯度：**
