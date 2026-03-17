@@ -336,7 +336,7 @@ $$
 **步骤 1：对 $h_t$ 的梯度**
 
 $$
-\frac{\partial \mathcal{L}}{\partial h_t} = \underbrace{\frac{\partial \mathcal{L}_t}{\partial h_t}}_{\text{直接梯度}} + \underbrace{\frac{\partial \mathcal{L}}{\partial h_{t+1}} \cdot\frac{\partial h_{t+1}}{\partial h_t}}_{\text{传播梯度}}
+\frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_t} = \underbrace{\frac{\partial \mathcal{L}_t}{\partial h_t}}_{\text{直接梯度}} + \underbrace{\frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_{t+1}} \cdot\frac{\partial h_{t+1}}{\partial h_t}}_{\text{传播梯度}}
 $$
 
 <!--
@@ -371,17 +371,17 @@ $\frac{\partial \mathcal{L}_{t+2}}{\partial h_t} = \frac{\partial \ell}{\partial
 ...
 
 总梯度：
-$\frac{\partial \mathcal{L}}{\partial h_t} = \frac{\partial \mathcal{L}_t}{\partial h_t} + \frac{\partial \mathcal{L}_{t+1}}{\partial h_t} + \frac{\partial \mathcal{L}_{t+2}}{\partial h_t} + ... + \frac{\partial \mathcal{L}_T}{\partial h_t}$
+$\frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_t} = \frac{\partial \mathcal{L}_t}{\partial h_t} + \frac{\partial \mathcal{L}_{t+1}}{\partial h_t} + \frac{\partial \mathcal{L}_{t+2}}{\partial h_t} + ... + \frac{\partial \mathcal{L}_T}{\partial h_t}$
 
 为什么公式中只显式出现 $h_{t+1}$？
 
 因为使用递归定义：
-$\frac{\partial \mathcal{L}}{\partial h_t} = \frac{\partial \mathcal{L}_t}{\partial h_t} + \frac{\partial \mathcal{L}}{\partial h_{t+1}} \cdot \frac{\partial h_{t+1}}{\partial h_t}$
+$\frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_t} = \frac{\partial \mathcal{L}_t}{\partial h_t} + \frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_{t+1}} \cdot \frac{\partial h_{t+1}}{\partial h_t}$
 
-其中 $\frac{\partial \mathcal{L}}{\partial h_{t+1}}$ 已经包含了 $\mathcal{L}_{t+1}, \mathcal{L}_{t+2}, ..., \mathcal{L}_T$ 对 $h_{t+1}$ 的所有梯度。
+其中 $\frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_{t+1}}$ 已经包含了 $\mathcal{L}_{t+1}, \mathcal{L}_{t+2}, ..., \mathcal{L}_T$ 对 $h_{t+1}$ 的所有梯度。
 
 递归展开：
-$\frac{\partial \mathcal{L}}{\partial h_{t+1}} = \frac{\partial \mathcal{L}_{t+1}}{\partial h_{t+1}} + \frac{\partial \mathcal{L}}{\partial h_{t+2}} \cdot \frac{\partial h_{t+2}}{\partial h_{t+1}}$
+$\frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_{t+1}} = \frac{\partial \mathcal{L}_{t+1}}{\partial h_{t+1}} + \frac{\partial \mathcal{L}_{\text{seq}}}{\partial h_{t+2}} \cdot \frac{\partial h_{t+2}}{\partial h_{t+1}}$
 
 代入后即可得到完整展开式。
 
@@ -389,7 +389,7 @@ $\frac{\partial \mathcal{L}}{\partial h_{t+1}} = \frac{\partial \mathcal{L}_{t+1
 - $h_t$ 是第一块骨牌
 - 推倒第一块会连锁推倒第二块、第三块...
 - 我们只需要知道"第一块如何推第二块"（$\partial h_{t+1}/\partial h_t$）
-- "第二块及以后的影响"已经包含在 $\partial \mathcal{L}/\partial h_{t+1}$ 中
+- "第二块及以后的影响"已经包含在 $\partial \mathcal{L}_{\text{seq}}/\partial h_{t+1}$ 中
 -->
 
 **直接梯度：**
