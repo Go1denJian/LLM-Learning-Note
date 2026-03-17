@@ -4,6 +4,36 @@
 
 ---
 
+## 符号说明
+
+本文档使用以下符号约定：
+
+| 符号 | 含义 | 维度 |
+|------|------|------|
+| $T$ | 序列长度 | 标量 |
+| $t$ | 当前时刻 | 标量 |
+| $x_t$ | 时刻 $t$ 的输入向量 | $(d_{in}, 1)$ |
+| $h_t$ | 时刻 $t$ 的隐藏状态 | $(d_{hidden}, 1)$ |
+| $y_t$ | 时刻 $t$ 的真实标签 | $(d_{out}, 1)$ |
+| $\hat{y}_t$ | 时刻 $t$ 的预测输出 | $(d_{out}, 1)$ |
+| $z_t$ | softmax前的logits | $(d_{out}, 1)$ |
+| $W_{xh}$ | 输入到隐藏的权重 | $(d_{hidden}, d_{in})$ |
+| $W_{hh}$ | 隐藏到隐藏的权重（循环权重）| $(d_{hidden}, d_{hidden})$ |
+| $W_{hy}$ | 隐藏到输出的权重 | $(d_{out}, d_{hidden})$ |
+| $b_h, b_y$ | 偏置项 | - |
+| $\mathcal{L}_t$ | 时刻 $t$ 的损失 | 标量 |
+| $\mathcal{L}$ | 总损失 | 标量 |
+| $\odot$ | 逐元素乘法（Hadamard积）| - |
+| $\sigma$ | sigmoid函数 | - |
+| $\tanh$ | 双曲正切函数 | - |
+
+**典型维度示例：**
+- $d_{in} = 300$（词嵌入维度）
+- $d_{hidden} = 128$（隐藏状态维度）
+- $d_{out} = 10,000$（词汇表大小）
+
+---
+
 ## 1. 从MLP到RNN：为什么需要循环结构？
 
 ### 1.1 传统神经网络的局限
@@ -78,28 +108,7 @@ $$
 - $y_t$ = [2.5, -1.0, 0.3, ...] （每个词一个分数）
 - $\hat{y}_t$ = [0.7, 0.05, 0.15, ...] （概率和为1）
 
-**参数说明：**
-
-| 符号 | 维度 | 含义 |
-|------|------|------|
-| $x_t$ | $(d_{in}, 1)$ | 时刻t的输入向量 |
-| $h_t$ | $(d_{hidden}, 1)$ | 时刻t的隐藏状态 |
-| $y_t$ | $(d_{out}, 1)$ | 时刻t的原始输出（logits） |
-| $\hat{y}_t$ | $(d_{out}, 1)$ | 时刻t的预测概率分布 |
-| $W_{xh}$ | $(d_{hidden}, d_{in})$ | 输入到隐藏的权重 |
-| $W_{hh}$ | $(d_{hidden}, d_{hidden})$ | 隐藏到隐藏的权重（循环权重）|
-| $W_{hy}$ | $(d_{out}, d_{hidden})$ | 隐藏到输出的权重 |
-| $b_h, b_y$ | 偏置项 | - |
-
-**参数维度详解：**
-
-- $x_t \in \mathbb{R}^{d_{in} \times 1}$：输入向量，如词嵌入维度 $d_{in} = 300$
-- $h_t \in \mathbb{R}^{d_{hidden} \times 1}$：隐藏状态，存储历史信息，如 $d_{hidden} = 128$
-- $y_t \in \mathbb{R}^{d_{out} \times 1}$：输出logits，如词汇表大小 $d_{out} = 10,000$
-- $\hat{y}_t \in \mathbb{R}^{d_{out} \times 1}$：softmax后的概率分布
-- $W_{xh} \in \mathbb{R}^{d_{hidden} \times d_{in}}$：输入变换矩阵
-- $W_{hh} \in \mathbb{R}^{d_{hidden} \times d_{hidden}}$：循环权重矩阵（RNN的核心）
-- $W_{hy} \in \mathbb{R}^{d_{out} \times d_{hidden}}$：输出变换矩阵
+**参数说明：** 参见文档开头的[符号说明](#符号说明)部分。
 
 ### 2.2 展开视角 (Unrolled View)
 
@@ -179,38 +188,11 @@ $$
 \frac{\partial \mathcal{L}}{\partial h_t} = \underbrace{W_{hy}^T \cdot (\hat{y}_t - y_t)}_{\text{当前时刻}} + \underbrace{W_{hh}^T \cdot \frac{\partial \mathcal{L}}{\partial h_{t+1}} \odot (1 - \tanh^2(h_{t+1}))}_{\text{未来时刻传播}}
 $$
 
-**符号 $\odot$ 说明：**
-
-$\odot$ 表示**逐元素乘法**（Hadamard积），两个相同维度的向量/矩阵对应位置相乘。
-
-例如：
-```
-a = [1, 2, 3]
-b = [4, 5, 6]
-a ⊙ b = [1×4, 2×5, 3×6] = [4, 10, 18]
-```
-
-为什么这里用逐元素乘法？因为 tanh 的导数是 $1 - \tanh^2(x)$，需要对每个隐藏单元单独计算。
-
 ### 3.3 BPTT 梯度推导详解
 
 BPTT（Backpropagation Through Time）是RNN训练的核心算法。让我们从数学上详细推导梯度计算过程。
 
 #### 3.3.1 问题设定
-
-**符号定义：**
-
-| 符号 | 含义 | 维度 |
-|------|------|------|
-| $T$ | 序列长度 | 标量 |
-| $\mathcal{L}_t$ | 时刻 $t$ 的损失 | 标量 |
-| $\mathcal{L} = \sum_{t=1}^T \mathcal{L}_t$ | 总损失 | 标量 |
-| $h_t$ | 时刻 $t$ 的隐藏状态 | $(d_{hidden}, 1)$ |
-| $y_t$ | 时刻 $t$ 的真实标签 | $(d_{out}, 1)$ |
-| $\hat{y}_t$ | 时刻 $t$ 的预测输出 | $(d_{out}, 1)$ |
-| $W_{hh}$ | 隐藏-隐藏权重 | $(d_{hidden}, d_{hidden})$ |
-| $W_{xh}$ | 输入-隐藏权重 | $(d_{hidden}, d_{in})$ |
-| $W_{hy}$ | 隐藏-输出权重 | $(d_{out}, d_{hidden})$ |
 
 **前向传播回顾：**
 
