@@ -548,7 +548,7 @@ h₁ ← h₂ ← h₃ ← ... ← h₁₀₀
 
 ---
 
-## 5. 解决方案概览
+## 5. RNN训练优化方法总结
 
 ### 5.1 梯度裁剪 (Gradient Clipping)
 
@@ -571,7 +571,7 @@ if ||gradient|| > threshold:
 
 ---
 
-## 6. 从零实现基础RNN
+## 6. 从数学到代码：RNN完整实现
 
 ### 6.1 NumPy实现
 
@@ -1064,7 +1064,52 @@ $$
 
 ---
 
-## 符号说明
+## 参考资源
+
+### 经典论文
+
+1. Rumelhart, D. E., Hinton, G. E., & Williams, R. J. (1986). [Learning representations by back-propagating errors](https://www.nature.com/articles/323533a0). Nature, 323(6088), 533-536.
+   - **贡献**：反向传播算法的奠基性论文
+
+2. Werbos, P. J. (1990). [Backpropagation Through Time: What It Does and How to Do It](https://ieeexplore.ieee.org/document/58337). Proceedings of the IEEE, 78(10), 1550-1560.
+   - **贡献**：BPTT算法的完整描述
+
+3. Elman, J. L. (1990). [Finding Structure in Time](https://crl.ucsd.edu/~elman/Papers/fsit.pdf). Cognitive Science, 14(2), 179-211.
+   - **贡献**：Simple RNN（Elman网络）的提出
+
+4. Hochreiter, S., & Schmidhuber, J. (1997). [Long Short-Term Memory](https://www.bioinf.jku.at/publications/older/2604.pdf). Neural Computation, 9(8), 1735-1780.
+   - **贡献**：LSTM的原始论文，解决梯度消失问题
+
+5. Cho, K., et al. (2014). [Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation](https://arxiv.org/abs/1406.1078). EMNLP 2014.
+   - **贡献**：GRU和Seq2Seq架构的提出
+
+### 教材与书籍
+
+6. Goodfellow, I., Bengio, Y., & Courville, A. (2016). [Deep Learning](https://www.deeplearningbook.org/) - Chapter 10: Sequence Modeling: Recurrent and Recursive Nets. MIT Press.
+   - **章节**：第10章详细讲解RNN和BPTT
+
+7. 邱锡鹏. (2020). [神经网络与深度学习](https://nndl.github.io/) - 第6章：循环神经网络. 
+   - **章节**：第6章中文详解RNN原理
+
+### 在线资源与教程
+
+8. Karpathy, A. (2015). [The Unreasonable Effectiveness of Recurrent Neural Networks](http://karpathy.github.io/2015/05/21/rnn-effectiveness/).
+   - **内容**：RNN的直观解释和char-rnn实现
+
+9. Stanford CS224n: [Natural Language Processing with Deep Learning](http://web.stanford.edu/class/cs224n/).
+   - **内容**：NLP深度学习的经典课程，包含RNN/LSTM/Attention
+
+10. Olah, C. (2015). [Understanding LSTM Networks](https://colah.github.io/posts/2015-08-Understanding-LSTMs/).
+    - **内容**：LSTM和GRU的可视化解释
+
+### 代码实现
+
+11. [PyTorch RNN Documentation](https://pytorch.org/docs/stable/nn.html#rnn)
+12. [TensorFlow RNN Tutorial](https://www.tensorflow.org/tutorials/text/text_classification_rnn)
+
+
+
+## 附录：符号表
 
 本文档使用以下符号约定：
 
