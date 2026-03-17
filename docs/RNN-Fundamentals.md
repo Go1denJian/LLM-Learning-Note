@@ -79,6 +79,7 @@ $$
 - $\hat{y}_t$ = [0.7, 0.05, 0.15, ...] （概率和为1）
 
 **参数说明：**
+
 | 符号 | 维度 | 含义 |
 |------|------|------|
 | $x_t$ | $(d_{in}, 1)$ | 时刻t的输入向量 |
@@ -89,6 +90,16 @@ $$
 | $W_{hh}$ | $(d_{hidden}, d_{hidden})$ | 隐藏到隐藏的权重（循环权重）|
 | $W_{hy}$ | $(d_{out}, d_{hidden})$ | 隐藏到输出的权重 |
 | $b_h, b_y$ | 偏置项 | - |
+
+**参数维度详解：**
+
+- $x_t \in \mathbb{R}^{d_{in} \times 1}$：输入向量，如词嵌入维度 $d_{in} = 300$
+- $h_t \in \mathbb{R}^{d_{hidden} \times 1}$：隐藏状态，存储历史信息，如 $d_{hidden} = 128$
+- $y_t \in \mathbb{R}^{d_{out} \times 1}$：输出logits，如词汇表大小 $d_{out} = 10,000$
+- $\hat{y}_t \in \mathbb{R}^{d_{out} \times 1}$：softmax后的概率分布
+- $W_{xh} \in \mathbb{R}^{d_{hidden} \times d_{in}}$：输入变换矩阵
+- $W_{hh} \in \mathbb{R}^{d_{hidden} \times d_{hidden}}$：循环权重矩阵（RNN的核心）
+- $W_{hy} \in \mathbb{R}^{d_{out} \times d_{hidden}}$：输出变换矩阵
 
 ### 2.2 展开视角 (Unrolled View)
 
@@ -181,55 +192,237 @@ a ⊙ b = [1×4, 2×5, 3×6] = [4, 10, 18]
 
 为什么这里用逐元素乘法？因为 tanh 的导数是 $1 - \tanh^2(x)$，需要对每个隐藏单元单独计算。
 
-### 3.3 梯度展开详解
+### 3.3 BPTT 梯度推导详解
 
-让我们逐步展开从时刻 T 到时刻 t 的梯度传播：
+BPTT（Backpropagation Through Time）是RNN训练的核心算法。让我们从数学上详细推导梯度计算过程。
 
-**时刻 T（最后一个时刻）：**
+#### 3.3.1 问题设定
+
+**符号定义：**
+
+| 符号 | 含义 | 维度 |
+|------|------|------|
+| $T$ | 序列长度 | 标量 |
+| $\mathcal{L}_t$ | 时刻 $t$ 的损失 | 标量 |
+| $\mathcal{L} = \sum_{t=1}^T \mathcal{L}_t$ | 总损失 | 标量 |
+| $h_t$ | 时刻 $t$ 的隐藏状态 | $(d_{hidden}, 1)$ |
+| $y_t$ | 时刻 $t$ 的真实标签 | $(d_{out}, 1)$ |
+| $\hat{y}_t$ | 时刻 $t$ 的预测输出 | $(d_{out}, 1)$ |
+| $W_{hh}$ | 隐藏-隐藏权重 | $(d_{hidden}, d_{hidden})$ |
+| $W_{xh}$ | 输入-隐藏权重 | $(d_{hidden}, d_{in})$ |
+| $W_{hy}$ | 隐藏-输出权重 | $(d_{out}, d_{hidden})$ |
+
+**前向传播回顾：**
 
 $$
-\frac{\partial \mathcal{L}}{\partial h_T} = W_{hy}^T \cdot (\hat{y}_T - y_T)
+h_t = \tanh(W_{hh} h_{t-1} + W_{xh} x_t + b_h) \\
+\hat{y}_t = \text{softmax}(W_{hy} h_t + b_y)
+$$
+
+**损失函数（交叉熵）：**
+
+$$
+\mathcal{L}_t = -\sum_{i=1}^{d_{out}} y_{t,i} \log(\hat{y}_{t,i})
+$$
+
+#### 3.3.2 输出层梯度推导
+
+**步骤 1：Softmax + 交叉熵的梯度**
+
+对于Softmax输出和交叉熵损失，梯度有简洁形式：
+
+$$
+\frac{\partial \mathcal{L}_t}{\partial z_t} = \hat{y}_t - y_t
+$$
+
+其中 $z_t = W_{hy} h_t + b_y$ 是softmax前的logits。
+
+**推导过程：**
+
+Softmax定义：
+$$
+\hat{y}_{t,i} = \frac{e^{z_{t,i}}}{\sum_j e^{z_{t,j}}}
+$$
+
+交叉熵损失：
+$$
+\mathcal{L}_t = -\sum_i y_{t,i} \log(\hat{y}_{t,i})
+$$
+
+对 $z_{t,k}$ 求导：
+
+$$
+\frac{\partial \mathcal{L}_t}{\partial z_{t,k}} = -\sum_i y_{t,i} \frac{\partial \log(\hat{y}_{t,i})}{\partial z_{t,k}}
+$$
+
+分两种情况：
+
+**情况 A：$i = k$**
+
+$$
+\frac{\partial \hat{y}_{t,k}}{\partial z_{t,k}} = \hat{y}_{t,k}(1 - \hat{y}_{t,k})
+$$
+
+**情况 B：$i \neq k$**
+
+$$
+\frac{\partial \hat{y}_{t,i}}{\partial z_{t,k}} = -\hat{y}_{t,i} \hat{y}_{t,k}
+$$
+
+**综合：**
+
+$$
+\begin{aligned}
+\frac{\partial \mathcal{L}_t}{\partial z_{t,k}} &= -y_{t,k} \cdot \frac{1}{\hat{y}_{t,k}} \cdot \hat{y}_{t,k}(1 - \hat{y}_{t,k}) - \sum_{i \neq k} y_{t,i} \cdot \frac{1}{\hat{y}_{t,i}} \cdot (-\hat{y}_{t,i}\hat{y}_{t,k}) \\
+&= -y_{t,k}(1 - \hat{y}_{t,k}) + \sum_{i \neq k} y_{t,i} \hat{y}_{t,k} \\
+&= -y_{t,k} + y_{t,k}\hat{y}_{t,k} + \sum_{i \neq k} y_{t,i} \hat{y}_{t,k} \\
+&= -y_{t,k} + \hat{y}_{t,k} \sum_i y_{t,i} \\
+&= \hat{y}_{t,k} - y_{t,k} \quad (\text{因为 } \sum_i y_{t,i} = 1)
+\end{aligned}
+$$
+
+**向量形式：**
+
+$$
+\frac{\partial \mathcal{L}_t}{\partial z_t} = \hat{y}_t - y_t \in \mathbb{R}^{d_{out}}
+$$
+
+**步骤 2：对 $W_{hy}$ 和 $b_y$ 的梯度**
+
+由 $z_t = W_{hy} h_t + b_y$：
+
+$$
+\frac{\partial \mathcal{L}_t}{\partial W_{hy}} = (\hat{y}_t - y_t) h_t^T \in \mathbb{R}^{d_{out} \times d_{hidden}}
+$$
+
+$$
+\frac{\partial \mathcal{L}_t}{\partial b_y} = \hat{y}_t - y_t \in \mathbb{R}^{d_{out}}
+$$
+
+#### 3.3.3 隐藏层梯度推导（核心）
+
+**关键挑战：** 隐藏状态 $h_t$ 影响损失的两条路径：
+
+1. **直接路径**：$h_t \rightarrow z_t \rightarrow \mathcal{L}_t$（当前时刻损失）
+2. **间接路径**：$h_t \rightarrow h_{t+1} \rightarrow \ldots \rightarrow \mathcal{L}_{t+1}, \ldots$（未来时刻损失）
+
+**步骤 1：对 $h_t$ 的梯度**
+
+$$
+\frac{\partial \mathcal{L}}{\partial h_t} = \underbrace{\frac{\partial \mathcal{L}_t}{\partial h_t}}_{\text{直接梯度}} + \underbrace{\frac{\partial h_{t+1}}{\partial h_t} \cdot \frac{\partial \mathcal{L}}{\partial h_{t+1}}}_{\text{传播梯度}}
+$$
+
+**直接梯度：**
+
+由 $z_t = W_{hy} h_t + b_y$：
+
+$$
+\frac{\partial \mathcal{L}_t}{\partial h_t} = W_{hy}^T (\hat{y}_t - y_t) \in \mathbb{R}^{d_{hidden}}
+$$
+
+**雅可比矩阵 $\frac{\partial h_{t+1}}{\partial h_t}$：**
+
+由 $h_{t+1} = \tanh(W_{hh} h_t + W_{xh} x_{t+1} + b_h)$：
+
+令 $a_{t+1} = W_{hh} h_t + W_{xh} x_{t+1} + b_h$，则 $h_{t+1} = \tanh(a_{t+1})$
+
+$$
+\frac{\partial h_{t+1}}{\partial h_t} = \text{diag}(1 - \tanh^2(a_{t+1})) \cdot W_{hh} \in \mathbb{R}^{d_{hidden} \times d_{hidden}}
+$$
+
+其中 $\text{diag}(1 - \tanh^2(a_{t+1}))$ 是对角矩阵，对角线元素为 $1 - \tanh^2(a_{t+1,i})$。
+
+**综合：**
+
+$$
+\frac{\partial \mathcal{L}}{\partial h_t} = W_{hy}^T (\hat{y}_t - y_t) + W_{hh}^T \cdot \text{diag}(1 - \tanh^2(a_{t+1})) \cdot \frac{\partial \mathcal{L}}{\partial h_{t+1}}
+$$
+
+**步骤 2：对 $W_{hh}$ 和 $W_{xh}$ 的梯度**
+
+由 $h_t = \tanh(W_{hh} h_{t-1} + W_{xh} x_t + b_h)$：
+
+$$
+\frac{\partial \mathcal{L}}{\partial W_{hh}} = \sum_{t=1}^T \frac{\partial \mathcal{L}}{\partial h_t} \odot (1 - \tanh^2(a_t)) \cdot h_{t-1}^T
+$$
+
+$$
+\frac{\partial \mathcal{L}}{\partial W_{xh}} = \sum_{t=1}^T \frac{\partial \mathcal{L}}{\partial h_t} \odot (1 - \tanh^2(a_t)) \cdot x_t^T
+$$
+
+$$
+\frac{\partial \mathcal{L}}{\partial b_h} = \sum_{t=1}^T \frac{\partial \mathcal{L}}{\partial h_t} \odot (1 - \tanh^2(a_t))
+$$
+
+其中 $\odot$ 表示逐元素乘法。
+
+#### 3.3.4 梯度展开与连乘问题
+
+让我们逐步展开从时刻 $T$ 到时刻 $t$ 的梯度传播：
+
+**时刻 $T$（最后一个时刻）：**
+
+$$
+\frac{\partial \mathcal{L}}{\partial h_T} = W_{hy}^T (\hat{y}_T - y_T)
 $$
 
 只有当前时刻的损失，没有未来时刻。
 
-**时刻 T-1：**
+**时刻 $T-1$：**
 
 $$
-\frac{\partial \mathcal{L}}{\partial h_{T-1}} = W_{hy}^T \cdot (\hat{y}_{T-1} - y_{T-1}) + W_{hh}^T \cdot \frac{\partial \mathcal{L}}{\partial h_T} \odot (1 - \tanh^2(h_T))
+\frac{\partial \mathcal{L}}{\partial h_{T-1}} = W_{hy}^T (\hat{y}_{T-1} - y_{T-1}) + W_{hh}^T \cdot \text{diag}(1 - \tanh^2(a_T)) \cdot \frac{\partial \mathcal{L}}{\partial h_T}
 $$
 
-**时刻 T-2：**
+**时刻 $T-2$：**
 
 $$
-\frac{\partial \mathcal{L}}{\partial h_{T-2}} = W_{hy}^T \cdot (\hat{y}_{T-2} - y_{T-2}) + W_{hh}^T \cdot \frac{\partial \mathcal{L}}{\partial h_{T-1}} \odot (1 - \tanh^2(h_{T-1}))
+\frac{\partial \mathcal{L}}{\partial h_{T-2}} = W_{hy}^T (\hat{y}_{T-2} - y_{T-2}) + W_{hh}^T \cdot \text{diag}(1 - \tanh^2(a_{T-1})) \cdot \frac{\partial \mathcal{L}}{\partial h_{T-1}}
 $$
 
-**一般形式（时刻 t）：**
+**一般形式（时刻 $t$）：**
 
-将梯度从时刻 T 反向传播到时刻 t：
+将梯度从时刻 $T$ 反向传播到时刻 $t$：
 
 $$
-\frac{\partial \mathcal{L}}{\partial h_t} = \sum_{k=t}^{T} \left( \prod_{j=t+1}^{k} W_{hh}^T \cdot \text{diag}(1 - \tanh^2(h_j)) \right) \cdot W_{hy}^T \cdot (\hat{y}_k - y_k)
+\frac{\partial \mathcal{L}}{\partial h_t} = \sum_{k=t}^{T} \left( \prod_{j=t+1}^{k} W_{hh}^T \cdot \text{diag}(1 - \tanh^2(a_j)) \right) \cdot W_{hy}^T (\hat{y}_k - y_k)
 $$
 
 **核心观察：** 梯度计算涉及 $W_{hh}$ 的连乘！
 
-**数值示例（梯度传播）：**
+#### 3.3.5 数值示例（梯度传播）
 
-假设一个简单情况，T=3，我们要计算 $\frac{\partial \mathcal{L}}{\partial h_1}$：
+假设一个简单情况，$T=3$，我们要计算 $\frac{\partial \mathcal{L}}{\partial h_1}$：
+
+**路径分解：**
 
 ```
 路径1: h₁ → h₂ → h₃ → loss₃
 路径2: h₁ → h₂ → loss₂
 路径3: h₁ → loss₁
-
-∂L/∂h₁ = [W_hhᵀ · diag(1-tanh²(h₂)) · W_hhᵀ · diag(1-tanh²(h₃)) · ∂L/∂h₃]  ← 路径1
-       + [W_hhᵀ · diag(1-tanh²(h₂)) · ∂L/∂h₂]  ← 路径2
-       + [∂L/∂h₁的直接部分]  ← 路径3
 ```
 
-可以看到，从时刻1到时刻3，$W_{hh}^T$ 出现了两次连乘！
+**梯度计算：**
+
+$$
+\begin{aligned}
+\frac{\partial \mathcal{L}}{\partial h_1} &= \underbrace{W_{hy}^T (\hat{y}_1 - y_1)}_{\text{路径3：直接损失}} \\
+&+ \underbrace{W_{hh}^T \cdot D_2 \cdot W_{hy}^T (\hat{y}_2 - y_2)}_{\text{路径2：经h₂传播}} \\
+&+ \underbrace{W_{hh}^T \cdot D_2 \cdot W_{hh}^T \cdot D_3 \cdot W_{hy}^T (\hat{y}_3 - y_3)}_{\text{路径1：经h₂→h₃传播}}
+\end{aligned}
+$$
+
+其中 $D_t = \text{diag}(1 - \tanh^2(a_t))$。
+
+**关键问题：** 从时刻1到时刻3，$W_{hh}^T$ 出现了**两次连乘**！
+
+对于长度为 $T$ 的序列，从时刻1到时刻 $T$ 的梯度传播涉及 $W_{hh}^T$ 的 $(T-1)$ 次连乘：
+
+$$
+\frac{\partial \mathcal{L}}{\partial h_1} \propto (W_{hh}^T)^{T-1}
+$$
+
+这就是**梯度消失/爆炸**的数学根源！
 
 ---
 
