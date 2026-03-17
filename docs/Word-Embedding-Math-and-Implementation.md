@@ -12,10 +12,13 @@
 3. [共现矩阵与 PMI](#3-共现矩阵与-pmi)
 4. [Word2Vec 的两种架构](#4-word2vec-的两种架构)
 5. [负采样的数学本质](#5-负采样的数学本质)
-6. [梯度推导与参数更新](#6-梯度推导与参数更新)
-7. [从数学到代码：完整实现](#7-从数学到代码完整实现)
-8. [实践技巧与可视化](#8-实践技巧与可视化)
-9. [练习与思考题](#9-练习与思考题)
+6. [Word2Vec 训练优化方法总结](#6-word2vec-训练优化方法总结)
+7. [梯度推导与参数更新](#7-梯度推导与参数更新)
+8. [从数学到代码：完整实现](#8-从数学到代码完整实现)
+9. [实践技巧与可视化](#9-实践技巧与可视化)
+10. [扩展阅读与实现](#扩展阅读与实现)
+11. [参考资源](#参考资源)
+12. [附录：符号表](#附录符号表)
 
 ---
 
@@ -693,7 +696,7 @@ $$
 
 ---
 
-## 7. 从数学到代码：完整实现
+## 8. 从数学到代码：完整实现
 
 ### 7.1 数据预处理
 
@@ -1058,7 +1061,7 @@ def find_similar_words(
 
 ---
 
-## 8. 实践技巧与可视化
+## 9. 实践技巧与可视化
 
 ### 8.1 超参数选择
 
@@ -1122,7 +1125,7 @@ def plot_word_analogies(model, vocab):
 
 ---
 
-## 9. 扩展阅读与实现
+## 10. 扩展阅读与实现
 
 本章提供详细的数学推导、代码实现和深度分析，帮助巩固前面学习的知识。
 
@@ -1532,6 +1535,25 @@ def evaluate_analogy(model, vocab, analogies):
 
 ---
 
+## 参考资源
+
+### 经典论文
+
+1. Mikolov, T., et al. (2013). [Efficient Estimation of Word Representations in Vector Space](https://arxiv.org/abs/1301.3781). ICLR 2013.
+   - **贡献**：Word2Vec原始论文，提出CBOW和Skip-gram架构
+
+2. Mikolov, T., et al. (2013). [Distributed Representations of Words and Phrases](https://arxiv.org/abs/1310.4546). NeurIPS 2013.
+   - **贡献**：负采样和子词建模
+
+3. Levy, O., & Goldberg, Y. (2014). [Neural Word Embedding as Implicit Matrix Factorization](https://arxiv.org/abs/1402.3722). NeurIPS 2014.
+   - **贡献**：证明Word2Vec等价于PMI矩阵分解
+
+### 代码实现
+
+4. [Word2Vec 原始代码](https://code.google.com/archive/p/word2vec/)
+
+---
+
 ## 附录：符号表
 
 | 符号 | 含义 | 典型值 |
@@ -1545,15 +1567,6 @@ def evaluate_analogy(model, vocab, analogies):
 | $\mathbf{v}_w$ | 词 $w$ 的输入向量 | $\mathbb{R}^d$ |
 | $\mathbf{u}_w$ | 词 $w$ 的输出向量 | $\mathbb{R}^d$ |
 | $P(w)$ | 负采样分布 | $f(w)^{3/4} / Z$ |
-
----
-
-## 参考文献
-
-1. Mikolov, T., et al. (2013). [Efficient Estimation of Word Representations in Vector Space](https://arxiv.org/abs/1301.3781). ICLR 2013.
-2. Mikolov, T., et al. (2013). [Distributed Representations of Words and Phrases](https://arxiv.org/abs/1310.4546). NeurIPS 2013.
-3. Levy, O., & Goldberg, Y. (2014). [Neural Word Embedding as Implicit Matrix Factorization](https://arxiv.org/abs/1402.3722). NeurIPS 2014.
-4. [Word2Vec 原始代码](https://code.google.com/archive/p/word2vec/)
 
 ---
 
