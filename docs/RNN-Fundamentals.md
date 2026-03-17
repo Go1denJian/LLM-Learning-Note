@@ -153,6 +153,19 @@ $$
 \mathcal{L}_t = -\log(\hat{y}_{t,k})
 $$
 
+> **注释：为什么叫"交叉熵"？**
+> 
+> 交叉熵（Cross-Entropy）源于信息论，衡量两个概率分布之间的差异：
+> - $y_t$：真实分布（目标分布）
+> - $\hat{y}_t$：模型预测的分布
+> 
+> 公式 $H(y, \hat{y}) = -\sum_i y_i \log(\hat{y}_i)$ 表示：用模型分布 $\hat{y}$ 来编码真实分布 $y$ 所需的平均比特数。
+> 
+> 当两个分布完全一致时，交叉熵等于真实分布的熵（最小值）；
+> 当两个分布差异越大，交叉熵越大。
+> 
+> 在分类任务中，由于 $y$ 是 one-hot（确定性的），交叉熵简化为 $-\log(\hat{y}_{\text{正确}})$，即负对数似然。
+
 **直观理解：** 模型对正确答案给出的概率越高，损失越小。
 
 **数值示例：**
@@ -291,8 +304,53 @@ $$
 **步骤 1：对 $h_t$ 的梯度**
 
 $$
-\frac{\partial \mathcal{L}}{\partial h_t} = \underbrace{\frac{\partial \mathcal{L}_t}{\partial h_t}}_{\text{直接梯度}} + \underbrace{\frac{\partial h_{t+1}}{\partial h_t} \cdot \frac{\partial \mathcal{L}}{\partial h_{t+1}}}_{\text{传播梯度}}
+\frac{\partial \mathcal{L}}{\partial h_t} = \underbrace{\frac{\partial \mathcal{L}_t}{\partial h_t}}_{\text{直接梯度}} + \underbrace{\frac{\partial \mathcal{L}}{\partial h_{t+1}} \cdot\frac{\partial h_{t+1}}{\partial h_t}}_{\text{传播梯度}}
 $$
+
+> **注释：$\mathcal{L}$ vs $\mathcal{L}_t$ 的区别，以及为什么只推导到 $h_{t+1}$**
+> 
+> **符号区别：**
+> - $\mathcal{L}_t$：仅时刻 $t$ 的**局部损失**（当前时刻的预测误差）
+> - $\mathcal{L} = \sum_{k=1}^{T} \mathcal{L}_k$：整个序列的**总损失**（所有时刻损失之和）
+> 
+> **为什么 $\frac{\partial \mathcal{L}}{\partial h_t}$ 包含未来时刻的梯度？**
+> 
+> 因为 $h_t$ 通过递归连接影响所有未来时刻的隐藏状态：
+> ```
+> h_t → h_{t+1} → h_{t+2} → ... → h_T
+>       ↓         ↓              ↓
+>       L_{t+1}   L_{t+2}       L_T
+> ```
+> 
+> 所以：
+> $$
+> \frac{\partial \mathcal{L}}{\partial h_t} = \frac{\partial \mathcal{L}_t}{\partial h_t} + \frac{\partial \mathcal{L}_{t+1}}{\partial h_t} + \frac{\partial \mathcal{L}_{t+2}}{\partial h_t} + ... + \frac{\partial \mathcal{L}_T}{\partial h_t}
+> $$
+> 
+> **为什么公式中只出现 $h_{t+1}$，而没有 $h_{t+2}, h_{t+3}, ...$？**
+> 
+> 这是**递归定义**的巧妙之处！我们不需要显式写出所有未来时刻，因为：
+> 
+> 1. $\frac{\partial \mathcal{L}}{\partial h_{t+1}}$ 已经包含了从 $t+1$ 到 $T$ 的所有梯度信息
+> 2. 通过递归展开：
+>    ```
+>    ∂L/∂h_t = ∂L_t/∂h_t + (∂L/∂h_{t+1}) · (∂h_{t+1}/∂h_t)
+>    
+>    而 ∂L/∂h_{t+1} = ∂L_{t+1}/∂h_{t+1} + (∂L/∂h_{t+2}) · (∂h_{t+2}/∂h_{t+1})
+>    
+>    代入得：
+>    ∂L/∂h_t = ∂L_t/∂h_t + [∂L_{t+1}/∂h_{t+1} + (∂L/∂h_{t+2})·(∂h_{t+2}/∂h_{t+1})] · (∂h_{t+1}/∂h_t)
+>    
+>    = ∂L_t/∂h_t + ∂L_{t+1}/∂h_{t+1}·(∂h_{t+1}/∂h_t) + ∂L/∂h_{t+2}·(∂h_{t+2}/∂h_{t+1})·(∂h_{t+1}/∂h_t)
+>    
+>    = ...（继续展开直到 T）
+>    ```
+> 
+> 3. 这就是**链式法则的递归应用**：每一层梯度只关心"下一层"，但最终会传播到所有未来时刻。
+> 
+> **类比理解：**
+> 就像多米诺骨牌：推倒第一块（$h_t$），它会推倒第二块（$h_{t+1}$），第二块再推倒第三块（$h_{t+2}$）...
+> 我们只需要知道"当前块如何影响下一块"（$\partial h_{t+1}/\partial h_t$），不需要直接知道"当前块如何影响第十块"，因为影响会通过递归传递。
 
 **直接梯度：**
 
