@@ -9,7 +9,7 @@ LLM Learning Notes 的完整笔记索引与导航。
 建议按时间顺序阅读：
 
 ```
-基础篇 → RNN → LSTM → Word2Vec → GloVe → GRU/Seq2Seq → Transformer → BERT → GPT-2 → ...
+基础篇 → RNN → LSTM → Word2Vec → GloVe → GRU/Seq2Seq → Transformer → BERT → GPT-2 → T5 → ...
 ```
 
 ---
