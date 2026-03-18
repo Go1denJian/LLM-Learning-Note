@@ -2,7 +2,92 @@
 
 从数学原理到代码实现的深度学习与大模型学习笔记。
 
-> 核心理念：理解公式背后的直觉，掌握从数学到代码的映射
+> **核心理念**：理解公式背后的直觉，掌握从数学到代码的映射
+
+---
+
+## 学习路径
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  基础篇                                                          │
+│  └── [熵与KL散度](docs/00-Foundation/)                           │
+│      信息论基础、交叉熵损失的本质                                 │
+├─────────────────────────────────────────────────────────────────┤
+│  词嵌入篇                                                        │
+│  └── [Word Embedding](docs/01-Word-Embedding/)                   │
+│      从共现矩阵到 Word2Vec 的完整推导                            │
+├─────────────────────────────────────────────────────────────────┤
+│  序列模型篇                                                      │
+│  ├── [RNN 基础](docs/02-RNN/) → 循环结构与梯度问题               │
+│  ├── [LSTM 深入](docs/03-LSTM/) → 三门机制与长期依赖             │
+│  └── [GRU 与 Seq2Seq](docs/04-GRU/) → 简化设计与编码器-解码器    │
+├─────────────────────────────────────────────────────────────────┤
+│  注意力机制篇                                                    │
+│  └── [Transformer](docs/05-Transformer/)                         │
+│      自注意力、多头注意力、位置编码完整实现                       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 核心内容
+
+### 基础篇
+
+| 文档 | 说明 | 难度 |
+|------|------|:----:|
+| [熵与KL散度](docs/00-Foundation/Entropy-CrossEntropy-KL-Explained.md) | 信息论基础、交叉熵损失的本质 | ⭐⭐ |
+
+### 词嵌入篇
+
+| 文档 | 说明 | 难度 |
+|------|------|:----:|
+| [Word Embedding](docs/01-Word-Embedding/Word-Embedding-Math-and-Implementation.md) | 从共现矩阵到词向量的完整推导 | ⭐⭐⭐ |
+
+**内容**：共现矩阵、PMI、Word2Vec、负采样、梯度推导
+
+### 序列模型篇
+
+| 文档 | 说明 | 难度 |
+|------|------|:----:|
+| [RNN Fundamentals](docs/02-RNN/RNN-Fundamentals.md) | 循环结构、BPTT、梯度消失/爆炸 | ⭐⭐⭐ |
+| [LSTM Deep Dive](docs/03-LSTM/LSTM-Deep-Dive.md) | 三门机制、细胞状态、梯度流 | ⭐⭐⭐⭐ |
+| [GRU & Seq2Seq](docs/04-GRU/GRU-and-Seq2Seq.md) | 简化门控、编码器-解码器架构 | ⭐⭐⭐⭐ |
+
+**特色**：每篇都包含完整的 NumPy 实现 + PyTorch 验证
+
+### Transformer 篇
+
+| 文档 | 说明 | 难度 |
+|------|------|:----:|
+| [Transformer](docs/05-Transformer/Transformer-Math-and-Implementation.md) | 自注意力机制完整实现 | ⭐⭐⭐⭐⭐ |
+
+---
+
+## 项目结构
+
+```
+LLM-Learning-Note/
+├── docs/                          # 学习笔记（按学习路径组织）
+│   ├── 00-Foundation/             # 基础：熵、KL散度
+│   ├── 01-Word-Embedding/         # 词嵌入
+│   ├── 02-RNN/                    # 循环神经网络
+│   ├── 03-LSTM/                   # 长短期记忆网络
+│   ├── 04-GRU/                    # 门控循环单元 + Seq2Seq
+│   ├── 05-Transformer/            # Transformer
+│   └── 06-Advanced/               # 进阶（预留）
+│
+├── src/                           # 源代码实现
+│   ├── word2vec/                  # Word2Vec (Skip-gram + CBOW)
+│   ├── transformer/               # Transformer Encoder
+│   └── ...                        # RNN/LSTM/GRU 实现（待补充）
+│
+├── examples/                      # 可运行示例
+├── guides/                        # 学习指南
+├── tests/                         # 单元测试
+└── assets/                        # 可视化输出
+```
 
 ---
 
@@ -28,109 +113,38 @@ python examples/test_word2vec.py
 
 # Transformer 测试
 python examples/test_transformer.py
-
-# 完整训练
-python examples/train_word2vec.py
 ```
 
 ### 3. 阅读文档
 
-- [文档中心](docs/README.md) - 完整笔记索引
-- [Word Embedding](docs/Word-Embedding-Math-and-Implementation.md)
-- [Transformer](docs/Transformer-Math-and-Implementation.md)
-
----
-
-## 项目结构
-
-```
-LLM-Learning-Note/
-├── docs/                      # 学习笔记
-│   ├── README.md
-│   ├── Word-Embedding-Math-and-Implementation.md
-│   ├── Transformer-Math-and-Implementation.md
-│   └── ...
-│
-├── src/                       # 源代码
-│   ├── word2vec/             # Word2Vec 实现
-│   │   └── __init__.py
-│   └── transformer/          # Transformer 实现
-│       ├── __init__.py
-│       └── numpy_demo.py
-│
-├── examples/                  # 示例脚本
-│   ├── test_word2vec.py
-│   ├── test_transformer.py
-│   └── train_word2vec.py
-│
-├── assets/                    # 生成的资源
-│   └── (可视化图片)
-│
-├── archive/                   # 归档内容
-│
-├── requirements.txt           # Python 依赖
-├── .gitignore
-└── README.md                  # 本文件
-```
-
----
-
-## 核心内容
-
-### Word Embedding
-
-| 资源 | 说明 |
-|------|------|
-| [笔记](docs/Word-Embedding-Math-and-Implementation.md) | 从共现矩阵到 Word2Vec |
-| [源码](src/word2vec/__init__.py) | Skip-gram + CBOW 实现 |
-| [示例](examples/train_word2vec.py) | 完整训练流程 |
-
-数学内容：共现矩阵、PMI、负采样、梯度推导
-
-### Transformer
-
-| 资源 | 说明 |
-|------|------|
-| [笔记](docs/Transformer-Math-and-Implementation.md) | 从线性代数到 Transformer |
-| [源码](src/transformer/__init__.py) | Encoder 完整实现 |
-| [NumPy 验证](src/transformer/numpy_demo.py) | 纯 NumPy 数学验证 |
-
-数学内容：注意力机制、多头注意力、位置编码
+- [文档中心](docs/README.md) - 完整笔记索引与导航
 
 ---
 
 ## 数学公式速查
 
-### Word Embedding
+### RNN
+$$h_t = \tanh(W_{hh} h_{t-1} + W_{xh} x_t + b_h)$$
 
-**Skip-gram with Negative Sampling**:
+### LSTM
+$$\begin{aligned}
+f_t &= \sigma(W_{xf} x_t + W_{hf} h_{t-1} + b_f) \\
+i_t &= \sigma(W_{xi} x_t + W_{hi} h_{t-1} + b_i) \\
+C_t &= f_t \odot C_{t-1} + i_t \odot \tilde{C}_t \\
+h_t &= o_t \odot \tanh(C_t)
+\end{aligned}$$
 
-$$
-\mathcal{L} = -\log \sigma(\mathbf{u}_{w_o}^\top \mathbf{v}_{w_c}) - \sum_{i=1}^k \log \sigma(-\mathbf{u}_{w_i}^\top \mathbf{v}_{w_c})
-$$
-
-### Transformer
-
-**Scaled Dot-Product Attention**:
-
-$$
-\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}\right)V
-$$
+### Transformer Attention
+$$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}\right)V$$
 
 ---
 
 ## 参考资源
 
-- [Stanford CS224N](https://web.stanford.edu/class/cs224n/) - NLP 课程
-- [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/) - 可视化教程
-- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) - Transformer 论文
+- [Stanford CS224N](https://web.stanford.edu/class/cs224n/) - NLP 经典课程
+- [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/)
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
 
 ---
 
-## 许可证
-
-MIT License
-
----
-
-最后更新：2026-03-11
+最后更新：2026-03-18

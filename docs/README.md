@@ -1,16 +1,39 @@
 # 文档中心
 
-LLM Learning Notes 的完整笔记索引。
+LLM Learning Notes 的完整笔记索引与导航。
+
+---
+
+## 学习路径
+
+建议按以下顺序阅读：
+
+```
+基础篇 → 词嵌入篇 → 序列模型篇 → Transformer篇
+```
 
 ---
 
 ## 核心笔记
 
-### Word Embedding
+### 00-Foundation：基础篇
 
-| 文档 | 说明 | 难度 |
-|------|------|------|
-| [Word-Embedding-Math-and-Implementation.md](./Word-Embedding-Math-and-Implementation.md) | 从共现矩阵到词向量的完整推导 | 入门 |
+| 文档 | 说明 | 难度 | 前置知识 |
+|------|------|:----:|----------|
+| [Entropy-CrossEntropy-KL-Explained](./00-Foundation/Entropy-CrossEntropy-KL-Explained.md) | 信息论基础、交叉熵损失的本质 | ⭐⭐ | 概率论基础 |
+
+**内容概览**：
+- 信息量与熵的定义
+- 交叉熵与KL散度的关系
+- 为什么深度学习使用交叉熵损失
+
+---
+
+### 01-Word-Embedding：词嵌入篇
+
+| 文档 | 说明 | 难度 | 前置知识 |
+|------|------|:----:|----------|
+| [Word-Embedding-Math-and-Implementation](./01-Word-Embedding/Word-Embedding-Math-and-Implementation.md) | 从共现矩阵到词向量的完整推导 | ⭐⭐⭐ | 线性代数、梯度下降 |
 
 **内容概览**：
 1. 引言：为什么需要词向量
@@ -21,17 +44,78 @@ LLM Learning Notes 的完整笔记索引。
 6. 梯度推导与参数更新
 7. 从数学到代码：完整实现
 8. 实践技巧与可视化
-9. 练习与思考题
-
-**前置知识**：线性代数、概率论、梯度下降
+9. 扩展阅读与实现
+10. 参考资源
+附录：符号表
 
 ---
 
-### Transformer
+### 02-RNN：循环神经网络篇
 
-| 文档 | 说明 | 难度 |
-|------|------|------|
-| [Transformer-Math-and-Implementation.md](./Transformer-Math-and-Implementation.md) | 从线性代数到 Transformer 编码器 | 进阶 |
+| 文档 | 说明 | 难度 | 前置知识 |
+|------|------|:----:|----------|
+| [RNN-Fundamentals](./02-RNN/RNN-Fundamentals.md) | 循环结构、BPTT、梯度问题 | ⭐⭐⭐ | Word Embedding |
+
+**内容概览**：
+1. 从MLP到RNN：为什么需要循环结构？
+2. RNN的数学表达
+3. BPTT：随时间反向传播
+4. 梯度推导与参数更新
+5. 梯度消失与训练优化
+6. 从数学到代码：RNN完整实现
+7. 与其他模型的关系
+8. 扩展阅读与实现
+9. 参考资源
+附录：符号表
+
+---
+
+### 03-LSTM：长短期记忆网络篇
+
+| 文档 | 说明 | 难度 | 前置知识 |
+|------|------|:----:|----------|
+| [LSTM-Deep-Dive](./03-LSTM/LSTM-Deep-Dive.md) | 三门机制、细胞状态、梯度流 | ⭐⭐⭐⭐ | RNN基础 |
+
+**内容概览**：
+1. 引言：为什么需要 LSTM？
+2. LSTM 的数学表达
+3. 核心算法：三门机制
+4. 梯度推导与参数更新
+5. 训练优化方法总结
+6. 从数学到代码：完整实现
+7. 实践技巧与可视化
+8. 扩展阅读与实现
+9. 参考资源
+附录：符号表
+
+---
+
+### 04-GRU：门控循环单元篇
+
+| 文档 | 说明 | 难度 | 前置知识 |
+|------|------|:----:|----------|
+| [GRU-and-Seq2Seq](./04-GRU/GRU-and-Seq2Seq.md) | 简化门控、编码器-解码器架构 | ⭐⭐⭐⭐ | LSTM基础 |
+
+**内容概览**：
+1. 引言：为什么需要 GRU？
+2. GRU 的数学表达
+3. 核心算法：门控机制
+4. 梯度推导与参数更新
+5. 训练优化方法总结
+6. 从数学到代码：完整实现
+7. Seq2Seq 架构
+8. 注意力机制初步
+9. 扩展阅读与实现
+10. 参考资源
+附录：符号表
+
+---
+
+### 05-Transformer：注意力机制篇
+
+| 文档 | 说明 | 难度 | 前置知识 |
+|------|------|:----:|----------|
+| [Transformer-Math-and-Implementation](./05-Transformer/Transformer-Math-and-Implementation.md) | 自注意力机制完整实现 | ⭐⭐⭐⭐⭐ | RNN/LSTM基础 |
 
 **内容概览**：
 1. 引言：为什么 Transformer 需要数学
@@ -41,9 +125,9 @@ LLM Learning Notes 的完整笔记索引。
 5. 位置编码的傅里叶视角
 6. 从数学到代码：完整实现
 7. 实践中的关键技巧
-8. 练习与思考题
-
-**前置知识**：矩阵运算、softmax 函数、Python 基础
+8. 扩展阅读与实现
+9. 参考资源
+附录：符号表
 
 ---
 
@@ -152,6 +236,22 @@ python examples/train_word2vec.py
 
 ---
 
+## 常见问题
+
+### Q: 需要什么数学基础？
+**A**: 本科水平的线性代数（矩阵运算、特征值）、概率论（条件概率、分布）、微积分（梯度、链式法则）。
+
+### Q: 代码需要什么依赖？
+**A**: PyTorch、NumPy、Matplotlib、scikit-learn。运行 `pip install -r requirements.txt` 安装。
+
+### Q: 如何验证学习效果？
+**A**: 完成每章的练习与思考题，能够独立推导公式并修改代码。
+
+### Q: 笔记中的章节编号为什么不统一？
+**A**: 这是学习笔记而非教材，章节结构根据内容需要灵活调整。每篇笔记内部结构完整，可以独立阅读。
+
+---
+
 ## 外部资源
 
 ### 论文
@@ -168,17 +268,4 @@ python examples/train_word2vec.py
 
 ---
 
-## 常见问题
-
-### Q: 需要什么数学基础？
-**A**: 本科水平的线性代数（矩阵运算、特征值）、概率论（条件概率、分布）、微积分（梯度、链式法则）。
-
-### Q: 代码需要什么依赖？
-**A**: PyTorch、NumPy、Matplotlib、scikit-learn。运行 `pip install -r requirements.txt` 安装。
-
-### Q: 如何验证学习效果？
-**A**: 完成每章的练习与思考题，能够独立推导公式并修改代码。
-
----
-
-最后更新：2026-03-11
+最后更新：2026-03-18
