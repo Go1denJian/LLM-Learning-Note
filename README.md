@@ -30,7 +30,7 @@
 | 07 | BERT (Devlin, 2018) | [BERT-Math-and-Implementation](docs/07-BERT-Math-and-Implementation.md) | ⭐⭐⭐⭐⭐ | ✅ |
 | 08 | GPT-2 (Radford, 2019) | [GPT2-Math-and-Implementation](docs/08-GPT2-Math-and-Implementation.md) | ⭐⭐⭐⭐⭐ | ✅ |
 | 09 | T5 (Raffel, 2019) | [T5-Math-and-Implementation](docs/09-T5-Math-and-Implementation.md) | ⭐⭐⭐⭐ | ✅ |
-| 10 | GPT-3 (Brown, 2020) | — | ⭐⭐⭐⭐ | 待写 |
+| 10 | GPT-3 (Brown, 2020) | [GPT3-Scaling-and-InContext](docs/10-GPT3-Scaling-and-InContext.md) | ⭐⭐⭐⭐ | ✅ |
 | 11 | Switch Transformers (Fedus, 2021) | — | ⭐⭐⭐⭐⭐ | 待写 |
 | 12 | LoRA (Hu, 2021) | — | ⭐⭐⭐ | 待写 |
 | 13 | InstructGPT/RLHF (Ouyang, 2022) | — | ⭐⭐⭐⭐⭐ | 待写 |

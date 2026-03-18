@@ -96,11 +96,18 @@ LLM Learning Notes 的完整笔记索引与导航。
 
 ---
 
-### 10–15：待实现
+### 10：GPT-3 (Brown, 2020)
+
+| 文档 | 说明 | 难度 | 前置知识 |
+|------|------|:----:|----------|
+| [GPT3-Scaling-and-InContext](./10-GPT3-Scaling-and-InContext.md) | Scaling Laws、In-context Learning、稀疏注意力、大规模训练 | ⭐⭐⭐⭐ | GPT-2/T5基础 |
+
+---
+
+### 11–15：待实现
 
 | 编号 | 论文 | 年份 | 状态 |
 |------|------|------|------|
-| 10 | GPT-3 (Brown, 2020) | 2020 | 待写 |
 | 11 | Switch Transformers (Fedus, 2021) | 2021 | 待写 |
 | 12 | LoRA (Hu, 2021) | 2021 | 待写 |
 | 13 | InstructGPT/RLHF (Ouyang, 2022) | 2022 | 待写 |
