@@ -88,11 +88,18 @@ LLM Learning Notes 的完整笔记索引与导航。
 
 ---
 
-### 09–15：待实现
+### 09：T5 (Raffel, 2019)
+
+| 文档 | 说明 | 难度 | 前置知识 |
+|------|------|:----:|----------|
+| [T5-Math-and-Implementation](./09-T5-Math-and-Implementation.md) | 统一Text-to-Text框架、Span Corruption、Encoder-Decoder | ⭐⭐⭐⭐ | BERT/GPT-2基础 |
+
+---
+
+### 10–15：待实现
 
 | 编号 | 论文 | 年份 | 状态 |
 |------|------|------|------|
-| 09 | T5 (Raffel, 2019) | 2019 | 待写 |
 | 10 | GPT-3 (Brown, 2020) | 2020 | 待写 |
 | 11 | Switch Transformers (Fedus, 2021) | 2021 | 待写 |
 | 12 | LoRA (Hu, 2021) | 2021 | 待写 |
