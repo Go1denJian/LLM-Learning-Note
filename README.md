@@ -24,7 +24,7 @@
 | 01 | RNN (Elman, 1990) | [RNN-Fundamentals](docs/01-RNN-Fundamentals.md) | ⭐⭐⭐ | ✅ |
 | 02 | LSTM (Hochreiter, 1997) | [LSTM-Deep-Dive](docs/02-LSTM-Deep-Dive.md) | ⭐⭐⭐⭐ | ✅ |
 | 03 | Word2Vec (Mikolov, 2013) | [Word2Vec-Math-and-Implementation](docs/03-Word2Vec-Math-and-Implementation.md) | ⭐⭐⭐ | ✅ |
-| 04 | GloVe (Pennington, 2014) | — | ⭐⭐⭐ | 待写 |
+| 04 | GloVe (Pennington, 2014) | [GloVe-Math-and-Implementation](docs/04-GloVe-Math-and-Implementation.md) | ⭐⭐⭐ | ✅ |
 | 05 | GRU (Cho, 2014) | [GRU-and-Seq2Seq](docs/05-GRU-and-Seq2Seq.md) | ⭐⭐⭐⭐ | ✅ |
 | 06 | Transformer (Vaswani, 2017) | [Transformer-Math-and-Implementation](docs/06-Transformer-Math-and-Implementation.md) | ⭐⭐⭐⭐⭐ | ✅ |
 | 07 | BERT (Devlin, 2018) | — | ⭐⭐⭐ | 待写 |

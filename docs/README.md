@@ -48,7 +48,11 @@ LLM Learning Notes 的完整笔记索引与导航。
 
 ---
 
-### 04：GloVe (Pennington, 2014) — 待写
+### 04：GloVe (Pennington, 2014)
+
+| 文档 | 说明 | 难度 | 前置知识 |
+|------|------|:----:|----------|
+| [GloVe-Math-and-Implementation](./04-GloVe-Math-and-Implementation.md) | 共现概率比值、加权最小二乘目标 | ⭐⭐⭐ | Word2Vec |
 
 ---
 
