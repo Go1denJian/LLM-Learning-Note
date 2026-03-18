@@ -34,7 +34,7 @@
 | 10 | GPT-3 (Brown, 2020) | [GPT3-Scaling-and-InContext](docs/10-GPT3-Scaling-and-InContext.md) | ⭐⭐⭐⭐ | ✅ |
 | 11 | Switch Transformers (Fedus, 2021) | [Switch-Transformer-MoE](docs/11-Switch-Transformer-MoE.md) | ⭐⭐⭐⭐⭐ | ✅ |
 | 12 | LoRA (Hu, 2021) | [LoRA-Math-and-Implementation](docs/12-LoRA-Math-and-Implementation.md) | ⭐⭐⭐⭐ | ✅ |
-| 13 | InstructGPT/RLHF (Ouyang, 2022) | — | ⭐⭐⭐⭐⭐ | 待写 |
+| 13 | InstructGPT/RLHF (Ouyang, 2022) | [RLHF-Math-and-Implementation](docs/13-RLHF-Math-and-Implementation.md) | ⭐⭐⭐⭐⭐ | ✅ |
 | 14 | LLaMA (Touvron, 2023) | — | ⭐⭐⭐⭐ | 待写 |
 | 15 | DeepSeek-R1 (DeepSeek, 2024) | — | ⭐⭐⭐⭐⭐ | 待写 |
 

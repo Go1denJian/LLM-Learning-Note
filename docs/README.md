@@ -120,11 +120,18 @@ LLM Learning Notes 的完整笔记索引与导航。
 
 ---
 
-### 13–15：待实现
+### 13：InstructGPT/RLHF (Ouyang, 2022)
+
+| 文档 | 说明 | 难度 | 前置知识 |
+|------|------|:----:|----------|
+| [RLHF-Math-and-Implementation](./13-RLHF-Math-and-Implementation.md) | RLHF三阶段训练、PPO算法、奖励模型、KL约束 | ⭐⭐⭐⭐⭐ | GPT-3/LoRA基础 |
+
+---
+
+### 14–15：待实现
 
 | 编号 | 论文 | 年份 | 状态 |
 |------|------|------|------|
-| 13 | InstructGPT/RLHF (Ouyang, 2022) | 2022 | 待写 |
 | 14 | LLaMA (Touvron, 2023) | 2023 | 待写 |
 | 15 | DeepSeek-R1 (DeepSeek, 2024) | 2024 | 待写 |
 
@@ -164,4 +171,4 @@ from src.transformer import Encoder
 
 ---
 
-最后更新：2026-03-18
+最后更新：2026-03-19
