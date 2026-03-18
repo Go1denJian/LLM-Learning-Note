@@ -12,7 +12,7 @@
 00 信息论基础 → 01 RNN (1990) → 02 LSTM (1997) → 03 Word2Vec (2013)
 → 04 GloVe (2014) → 05 GRU/Seq2Seq (2014) → 06 Transformer (2017)
 → 07 BERT (2018) → 08 GPT-2 (2019) → 09 T5 (2019) → 10 GPT-3 (2020)
-→ 11 Switch Transformer (2021) → ... → 15 DeepSeek-R1 (2024)
+→ 11 Switch Transformer (2021) → 12 LoRA (2021) → ... → 15 DeepSeek-R1 (2024)
 ```
 
 ---
@@ -33,7 +33,7 @@
 | 09 | T5 (Raffel, 2019) | [T5-Math-and-Implementation](docs/09-T5-Math-and-Implementation.md) | ⭐⭐⭐⭐ | ✅ |
 | 10 | GPT-3 (Brown, 2020) | [GPT3-Scaling-and-InContext](docs/10-GPT3-Scaling-and-InContext.md) | ⭐⭐⭐⭐ | ✅ |
 | 11 | Switch Transformers (Fedus, 2021) | [Switch-Transformer-MoE](docs/11-Switch-Transformer-MoE.md) | ⭐⭐⭐⭐⭐ | ✅ |
-| 12 | LoRA (Hu, 2021) | — | ⭐⭐⭐ | 待写 |
+| 12 | LoRA (Hu, 2021) | [LoRA-Math-and-Implementation](docs/12-LoRA-Math-and-Implementation.md) | ⭐⭐⭐⭐ | ✅ |
 | 13 | InstructGPT/RLHF (Ouyang, 2022) | — | ⭐⭐⭐⭐⭐ | 待写 |
 | 14 | LLaMA (Touvron, 2023) | — | ⭐⭐⭐⭐ | 待写 |
 | 15 | DeepSeek-R1 (DeepSeek, 2024) | — | ⭐⭐⭐⭐⭐ | 待写 |

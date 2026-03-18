@@ -112,11 +112,18 @@ LLM Learning Notes 的完整笔记索引与导航。
 
 ---
 
-### 12–15：待实现
+### 12：LoRA (Hu, 2021)
+
+| 文档 | 说明 | 难度 | 前置知识 |
+|------|------|:----:|----------|
+| [LoRA-Math-and-Implementation](./12-LoRA-Math-and-Implementation.md) | 低秩适应、参数高效微调、权重合并推理 | ⭐⭐⭐⭐ | Transformer/GPT-3基础 |
+
+---
+
+### 13–15：待实现
 
 | 编号 | 论文 | 年份 | 状态 |
 |------|------|------|------|
-| 12 | LoRA (Hu, 2021) | 2021 | 待写 |
 | 13 | InstructGPT/RLHF (Ouyang, 2022) | 2022 | 待写 |
 | 14 | LLaMA (Touvron, 2023) | 2023 | 待写 |
 | 15 | DeepSeek-R1 (DeepSeek, 2024) | 2024 | 待写 |
