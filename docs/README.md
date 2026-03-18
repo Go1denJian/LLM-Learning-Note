@@ -128,11 +128,18 @@ LLM Learning Notes 的完整笔记索引与导航。
 
 ---
 
-### 14–15：待实现
+### 14：LLaMA (Touvron, 2023)
+
+| 文档 | 说明 | 难度 | 前置知识 |
+|------|------|:----:|----------|
+| [LLaMA-Architecture-and-Implementation](./14-LLaMA-Architecture-and-Implementation.md) | RMSNorm、SwiGLU激活、RoPE旋转位置编码、高效训练 | ⭐⭐⭐⭐ | Transformer/RLHF基础 |
+
+---
+
+### 15：待实现
 
 | 编号 | 论文 | 年份 | 状态 |
 |------|------|------|------|
-| 14 | LLaMA (Touvron, 2023) | 2023 | 待写 |
 | 15 | DeepSeek-R1 (DeepSeek, 2024) | 2024 | 待写 |
 
 ---

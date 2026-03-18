@@ -12,7 +12,8 @@
 00 信息论基础 → 01 RNN (1990) → 02 LSTM (1997) → 03 Word2Vec (2013)
 → 04 GloVe (2014) → 05 GRU/Seq2Seq (2014) → 06 Transformer (2017)
 → 07 BERT (2018) → 08 GPT-2 (2019) → 09 T5 (2019) → 10 GPT-3 (2020)
-→ 11 Switch Transformer (2021) → 12 LoRA (2021) → ... → 15 DeepSeek-R1 (2024)
+→ 11 Switch Transformer (2021) → 12 LoRA (2021) → 13 RLHF (2022)
+→ 14 LLaMA (2023) → ... → 15 DeepSeek-R1 (2024)
 ```
 
 ---
@@ -35,7 +36,7 @@
 | 11 | Switch Transformers (Fedus, 2021) | [Switch-Transformer-MoE](docs/11-Switch-Transformer-MoE.md) | ⭐⭐⭐⭐⭐ | ✅ |
 | 12 | LoRA (Hu, 2021) | [LoRA-Math-and-Implementation](docs/12-LoRA-Math-and-Implementation.md) | ⭐⭐⭐⭐ | ✅ |
 | 13 | InstructGPT/RLHF (Ouyang, 2022) | [RLHF-Math-and-Implementation](docs/13-RLHF-Math-and-Implementation.md) | ⭐⭐⭐⭐⭐ | ✅ |
-| 14 | LLaMA (Touvron, 2023) | — | ⭐⭐⭐⭐ | 待写 |
+| 14 | LLaMA (Touvron, 2023) | [LLaMA-Architecture-and-Implementation](docs/14-LLaMA-Architecture-and-Implementation.md) | ⭐⭐⭐⭐ | ✅ |
 | 15 | DeepSeek-R1 (DeepSeek, 2024) | — | ⭐⭐⭐⭐⭐ | 待写 |
 
 **特色**：每篇包含完整数学推导 + NumPy 从零实现 + PyTorch 验证
@@ -89,4 +90,4 @@ python examples/test_transformer.py
 
 ---
 
-最后更新：2026-03-18
+最后更新：2026-03-19

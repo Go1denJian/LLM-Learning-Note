@@ -725,20 +725,8 @@ r_w = np.random.randn(N) + 1.0  # 偏好回答的奖励 (均值偏高)
 r_l = np.random.randn(N) - 0.5  # 较差回答的奖励 (均值偏低)
 
 loss, grad_w, grad_l = reward_model_loss(r_w, r_l)
-print(f"奖励模型损失: {loss:.4f}")
-print(f"排序准确率: {np.mean(r_w > r_l):.2%}")
-print(f"梯度均值 (r_w): {grad_w.mean():.6f} (应为负, 推动 r_w 增大)")
-print(f"梯度均值 (r_l): {grad_l.mean():.6f} (应为正, 推动 r_l 减小)")
-
-# 数值梯度验证
-eps = 1e-5
-r_w_plus = r_w.copy(); r_w_plus[0] += eps
-r_w_minus = r_w.copy(); r_w_minus[0] -= eps
-num_grad = (reward_model_loss(r_w_plus, r_l)[0] - reward_model_loss(r_w_minus, r_l)[0]) / (2 * eps)
-print(f"\n数值梯度验证 (第0个样本):")
-print(f"  解析梯度: {grad_w[0]:.8f}")
-print(f"  数值梯度: {num_grad:.8f}")
-print(f"  相对误差: {abs(grad_w[0] - num_grad) / (abs(num_grad) + 1e-10):.2e}")
+print(f"奖励模型损失: {loss:.4f}, 排序准确率: {np.mean(r_w > r_l):.2%}")
+print(f"梯度: r_w={grad_w.mean():.6f}(负→增大), r_l={grad_l.mean():.6f}(正→减小)")
 ```
 
 #### 6.1.2 KL 散度计算
@@ -764,14 +752,11 @@ def kl_divergence_token(log_probs_policy, log_probs_ref):
     return kl_per_token, kl_per_seq
 
 # ===== 验证 =====
-B, T = 4, 20  # batch=4, seq_len=20
-log_probs_policy = np.random.randn(B, T) * 0.1 - 2.0  # 模拟对数概率
-log_probs_ref = log_probs_policy + np.random.randn(B, T) * 0.05  # 参考模型略有不同
-
+B, T = 4, 20
+log_probs_policy = np.random.randn(B, T) * 0.1 - 2.0
+log_probs_ref = log_probs_policy + np.random.randn(B, T) * 0.05
 kl_token, kl_seq = kl_divergence_token(log_probs_policy, log_probs_ref)
-print(f"平均 token 级 KL: {kl_token.mean():.4f}")
-print(f"平均序列级 KL: {kl_seq.mean():.4f}")
-print(f"KL 范围: [{kl_seq.min():.4f}, {kl_seq.max():.4f}]")
+print(f"token KL: {kl_token.mean():.4f}, seq KL: {kl_seq.mean():.4f}")
 ```
 
 #### 6.1.3 PPO-Clip 目标函数
@@ -827,13 +812,11 @@ def ppo_clip_objective(log_probs, log_probs_old, advantages, epsilon=0.2):
 # ===== 验证 =====
 B, T = 8, 30
 log_probs = np.random.randn(B, T) * 0.1 - 3.0
-log_probs_old = log_probs + np.random.randn(B, T) * 0.02  # 策略略有变化
-advantages = np.random.randn(B, T)  # 标准化后的优势
+log_probs_old = log_probs + np.random.randn(B, T) * 0.02
+advantages = np.random.randn(B, T)
 
 loss, stats = ppo_clip_objective(log_probs, log_probs_old, advantages)
-print(f"PPO-Clip 损失: {loss:.4f}")
-for k, v in stats.items():
-    print(f"  {k}: {v:.4f}")
+print(f"PPO-Clip 损失: {loss:.4f}, clip比例: {stats['clip_fraction']:.4f}")
 ```
 
 #### 6.1.4 GAE 计算
@@ -872,22 +855,13 @@ def compute_gae(rewards, values, gamma=1.0, lam=0.95):
 # ===== 验证 =====
 T = 20
 rewards = np.zeros(T)
-rewards[-1] = 3.5  # 仅在最后一个 token 给出奖励 (episode reward)
-
-# 添加 token 级 KL 惩罚
-beta = 0.1
-kl_penalty = np.random.exponential(0.05, T)  # 模拟 KL 惩罚
-rewards = rewards - beta * kl_penalty
-
-values = np.concatenate([np.linspace(0.5, 3.0, T), [0.0]])  # 模拟价值估计
+rewards[-1] = 3.5  # 仅在最后一个 token 给出奖励
+rewards -= 0.1 * np.random.exponential(0.05, T)  # KL 惩罚
+values = np.concatenate([np.linspace(0.5, 3.0, T), [0.0]])
 
 advantages, returns = compute_gae(rewards, values, gamma=1.0, lam=0.95)
-
-# 优势标准化
-advantages_norm = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-
-print(f"原始优势: mean={advantages.mean():.4f}, std={advantages.std():.4f}")
-print(f"标准化优势: mean={advantages_norm.mean():.4f}, std={advantages_norm.std():.4f}")
+adv_norm = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+print(f"优势: mean={advantages.mean():.4f}, std={advantages.std():.4f}")
 print(f"回报范围: [{returns.min():.4f}, {returns.max():.4f}]")
 ```
 
@@ -921,11 +895,7 @@ def adaptive_kl_controller(beta, kl_actual, kl_target, alpha=0.1):
 # ===== 模拟自适应过程 =====
 beta = 0.1
 kl_target = 6.0
-print(f"初始 β = {beta:.4f}, KL 目标 = {kl_target:.1f}")
-print("-" * 50)
-
-kl_values = [2.0, 3.0, 5.0, 8.0, 12.0, 10.0, 7.0, 5.5, 6.0]
-for step, kl in enumerate(kl_values):
+for step, kl in enumerate([2.0, 5.0, 8.0, 12.0, 7.0, 6.0]):
     beta = adaptive_kl_controller(beta, kl, kl_target)
     status = "↓放松" if kl < kl_target / 1.5 else ("↑加强" if kl > kl_target * 1.5 else "→保持")
     print(f"Step {step}: KL={kl:.1f}, β={beta:.4f} {status}")
@@ -1039,26 +1009,15 @@ class RewardModelLoss(nn.Module):
 
 # ===== 验证 =====
 torch.manual_seed(42)
-
-vocab_size = 1000
+vocab_size, B, T = 1000, 8, 32
 model = RewardModel(vocab_size, d_model=128, n_heads=4, n_layers=2)
 criterion = RewardModelLoss()
 
-# 模拟输入
-B = 8
-T = 32
-input_w = torch.randint(0, vocab_size, (B, T))
-input_l = torch.randint(0, vocab_size, (B, T))
-
-rewards_w = model(input_w)
-rewards_l = model(input_l)
+rewards_w = model(torch.randint(0, vocab_size, (B, T)))
+rewards_l = model(torch.randint(0, vocab_size, (B, T)))
 loss, acc = criterion(rewards_w, rewards_l)
-
-print(f"奖励模型参数量: {sum(p.numel() for p in model.parameters()):,}")
-print(f"偏好回答奖励: mean={rewards_w.mean():.4f}, std={rewards_w.std():.4f}")
-print(f"较差回答奖励: mean={rewards_l.mean():.4f}, std={rewards_l.std():.4f}")
-print(f"排序损失: {loss.item():.4f}")
-print(f"排序准确率: {acc.item():.2%}")
+print(f"参数量: {sum(p.numel() for p in model.parameters()):,}")
+print(f"排序损失: {loss.item():.4f}, 准确率: {acc.item():.2%}")
 ```
 
 #### 6.2.2 PPO 训练器
@@ -1067,31 +1026,20 @@ print(f"排序准确率: {acc.item():.2%}")
 class PPOTrainer:
     """
     RLHF PPO 训练器
-    
-    包含:
-        - 策略模型 (Actor): π_θ
-        - 价值模型 (Critic): V_ψ
-        - 参考模型: π_ref (冻结)
-        - 奖励模型: R_φ (冻结)
+    包含: 策略模型 π_θ, 价值模型 V_ψ, 参考模型 π_ref (冻结), 奖励模型 R_φ (冻结)
     """
     
     def __init__(self, policy_model, value_model, ref_model, reward_model,
                  lr=1e-5, clip_eps=0.2, vf_coef=0.5, entropy_coef=0.01,
-                 kl_coef=0.1, kl_target=6.0, gamma=1.0, lam=0.95,
-                 max_grad_norm=0.5):
-        
+                 kl_coef=0.1, kl_target=6.0, gamma=1.0, lam=0.95, max_grad_norm=0.5):
         self.policy = policy_model
         self.value = value_model
         self.ref = ref_model
         self.reward = reward_model
         
-        # 冻结参考模型和奖励模型
-        for p in self.ref.parameters():
-            p.requires_grad = False
-        for p in self.reward.parameters():
-            p.requires_grad = False
+        for p in self.ref.parameters(): p.requires_grad = False
+        for p in self.reward.parameters(): p.requires_grad = False
         
-        # 超参数
         self.clip_eps = clip_eps
         self.vf_coef = vf_coef
         self.entropy_coef = entropy_coef
@@ -1101,59 +1049,30 @@ class PPOTrainer:
         self.lam = lam
         self.max_grad_norm = max_grad_norm
         
-        # 优化器
         self.optimizer = torch.optim.Adam(
-            list(self.policy.parameters()) + list(self.value.parameters()),
-            lr=lr,
-        )
+            list(self.policy.parameters()) + list(self.value.parameters()), lr=lr)
     
     @torch.no_grad()
     def compute_rewards(self, input_ids, attention_mask, log_probs, ref_log_probs):
-        """
-        计算 token 级奖励 (奖励模型分数 + KL 惩罚)
-        
-        数学:
-            r_t = -β log(π_θ(y_t|...) / π_ref(y_t|...))  (t < T)
-            r_T = R_φ(x, y) - β log(π_θ(y_T|...) / π_ref(y_T|...))
-        """
+        """计算 token 级奖励: r_t = -β·KL_t, r_T += R_φ(x,y)"""
         B, T = input_ids.shape
-        
-        # 奖励模型打分 (整个序列)
         rm_scores = self.reward(input_ids, attention_mask)  # (B,)
-        
-        # Token 级 KL 惩罚
         kl_penalty = self.kl_coef * (log_probs - ref_log_probs)  # (B, T)
+        rewards = -kl_penalty
         
-        # 构造 token 级奖励
-        rewards = -kl_penalty  # (B, T) — 每个 token 的 KL 惩罚
-        
-        # 最后一个 token 加上奖励模型分数
         if attention_mask is not None:
-            last_idx = attention_mask.sum(dim=1).long() - 1  # (B,)
-            for i in range(B):
-                rewards[i, last_idx[i]] += rm_scores[i]
+            last_idx = attention_mask.sum(dim=1).long() - 1
+            for i in range(B): rewards[i, last_idx[i]] += rm_scores[i]
         else:
             rewards[:, -1] += rm_scores
-        
         return rewards, rm_scores, kl_penalty
     
     @torch.no_grad()
     def compute_advantages(self, rewards, values):
-        """
-        GAE 优势计算
-        
-        参数:
-            rewards: (B, T)
-            values:  (B, T)
-        返回:
-            advantages: (B, T) — 标准化后的优势
-            returns:    (B, T) — 目标回报
-        """
+        """GAE 优势计算 + 标准化"""
         B, T = rewards.shape
         advantages = torch.zeros_like(rewards)
         last_gae = torch.zeros(B, device=rewards.device)
-        
-        # 末尾 value = 0 (episode 结束)
         next_value = torch.zeros(B, device=rewards.device)
         
         for t in reversed(range(T)):
@@ -1163,233 +1082,136 @@ class PPOTrainer:
             next_value = values[:, t]
         
         returns = advantages + values
-        
-        # 优势标准化
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-        
         return advantages, returns
     
-    def ppo_step(self, input_ids, attention_mask, old_log_probs, 
+    def ppo_step(self, input_ids, attention_mask, old_log_probs,
                  advantages, returns, old_values):
-        """
-        PPO 更新步
+        """PPO 更新: L = L_policy + c1·L_value - c2·H[π]"""
+        current_log_probs = self.policy(input_ids)
+        current_values = self.value(input_ids)
         
-        数学:
-            L_policy = -min(r_t * A_t, clip(r_t, 1-ε, 1+ε) * A_t)
-            L_value  = max((V-V_target)², (V_clip-V_target)²)
-            L_total  = L_policy + c1 * L_value - c2 * H[π]
-        """
-        # 当前策略的 log_probs 和 values
-        # (实际实现中需要 policy 和 value 的 forward)
-        # 这里用简化版本演示核心逻辑
-        
-        current_log_probs = self.policy(input_ids)   # (B, T) — 简化
-        current_values = self.value(input_ids)        # (B, T) — 简化
-        
-        # === 策略损失 (PPO-Clip) ===
-        log_ratio = current_log_probs - old_log_probs  # (B, T)
+        # 策略损失 (PPO-Clip)
+        log_ratio = current_log_probs - old_log_probs
         ratio = torch.exp(log_ratio)
-        
         surr1 = ratio * advantages
         surr2 = torch.clamp(ratio, 1.0 - self.clip_eps, 1.0 + self.clip_eps) * advantages
         policy_loss = -torch.min(surr1, surr2).mean()
         
-        # === 价值损失 (Clipped) ===
+        # 价值损失 (Clipped)
         values_clipped = old_values + torch.clamp(
-            current_values - old_values, -self.clip_eps, self.clip_eps
-        )
-        vf_loss1 = (current_values - returns) ** 2
-        vf_loss2 = (values_clipped - returns) ** 2
-        value_loss = 0.5 * torch.max(vf_loss1, vf_loss2).mean()
+            current_values - old_values, -self.clip_eps, self.clip_eps)
+        value_loss = 0.5 * torch.max(
+            (current_values - returns)**2, (values_clipped - returns)**2).mean()
         
-        # === 熵奖励 ===
-        # entropy = -Σ π(a) log π(a) (鼓励探索)
+        # 熵奖励
         entropy = -(torch.exp(current_log_probs) * current_log_probs).mean()
         
-        # === 总损失 ===
+        # 总损失 + 梯度更新
         total_loss = policy_loss + self.vf_coef * value_loss - self.entropy_coef * entropy
-        
-        # === 梯度更新 ===
         self.optimizer.zero_grad()
         total_loss.backward()
         nn.utils.clip_grad_norm_(
             list(self.policy.parameters()) + list(self.value.parameters()),
-            self.max_grad_norm,
-        )
+            self.max_grad_norm)
         self.optimizer.step()
         
-        # === 统计信息 ===
-        clip_frac = (torch.abs(ratio - 1.0) > self.clip_eps).float().mean()
-        approx_kl = ((ratio - 1.0) - log_ratio).mean()
-        
-        stats = {
-            "policy_loss": policy_loss.item(),
-            "value_loss": value_loss.item(),
-            "entropy": entropy.item(),
-            "total_loss": total_loss.item(),
-            "clip_fraction": clip_frac.item(),
-            "approx_kl": approx_kl.item(),
+        return {
+            "policy_loss": policy_loss.item(), "value_loss": value_loss.item(),
+            "entropy": entropy.item(), "total_loss": total_loss.item(),
+            "clip_frac": (torch.abs(ratio - 1.0) > self.clip_eps).float().mean().item(),
+            "approx_kl": ((ratio - 1.0) - log_ratio).mean().item(),
         }
-        
-        return stats
     
     def update_kl_coef(self, kl_actual):
-        """更新自适应 KL 系数"""
-        if kl_actual < self.kl_target / 1.5:
-            self.kl_coef /= 1.1
-        elif kl_actual > self.kl_target * 1.5:
-            self.kl_coef *= 1.1
+        """自适应 KL 系数"""
+        if kl_actual < self.kl_target / 1.5: self.kl_coef /= 1.1
+        elif kl_actual > self.kl_target * 1.5: self.kl_coef *= 1.1
 
-print("PPOTrainer 类定义完成")
-print(f"关键超参数: clip_eps=0.2, kl_target=6.0, gamma=1.0, lam=0.95")
+print("PPOTrainer 定义完成 | clip_eps=0.2, kl_target=6.0, γ=1.0, λ=0.95")
 ```
 
-#### 6.2.3 完整 RLHF 训练循环
+#### 6.2.3 完整 RLHF 训练循环（伪代码）
 
 ```python
-def rlhf_training_loop(policy, value, ref, reward_model, 
-                        prompts, tokenizer, n_epochs=3, 
-                        batch_size=8, ppo_epochs=4):
+def rlhf_training_loop(policy, value, ref, reward_model, prompts, n_epochs=3, ppo_epochs=4):
     """
-    完整的 RLHF 训练循环 (伪代码结构)
-    
-    流程:
-        1. 采样: 用 policy 对 prompt 生成回答
-        2. 打分: 用 reward_model 和 ref_model 计算奖励
-        3. 估值: 用 value_model 估计优势
-        4. 更新: PPO 多轮更新
-        5. 调节: 更新 KL 系数
+    RLHF 训练循环: 采样 → 打分 → 估值 → PPO更新 → 调节KL
     """
     trainer = PPOTrainer(policy, value, ref, reward_model)
     
     for epoch in range(n_epochs):
-        epoch_stats = []
-        
-        for batch_idx in range(0, len(prompts), batch_size):
-            batch_prompts = prompts[batch_idx:batch_idx + batch_size]
-            
-            # ========== 阶段 1: 采样 ==========
+        for batch_prompts in batched(prompts, batch_size=8):
             with torch.no_grad():
-                # 用当前策略生成回答
-                # generated = policy.generate(batch_prompts, ...)
-                # input_ids = tokenize(batch_prompts + generated)
+                # 1. 用当前策略生成回答
+                generated = policy.generate(batch_prompts)
+                old_log_probs = policy.log_prob(generated)
+                ref_log_probs = ref.log_prob(generated)
+                old_values = value(generated)
                 
-                # 计算 log probs (旧策略)
-                # old_log_probs = policy.log_prob(input_ids)
-                # ref_log_probs = ref.log_prob(input_ids)
-                # old_values = value(input_ids)
-                pass  # 实际实现需要模型的 generate 方法
+                # 2. 计算奖励 (RM分数 + KL惩罚)
+                rewards, rm_scores, kl = trainer.compute_rewards(
+                    generated, None, old_log_probs, ref_log_probs)
+                
+                # 3. 计算GAE优势
+                advantages, returns = trainer.compute_advantages(rewards, old_values)
             
-            # ========== 阶段 2: 计算奖励 ==========
-            # rewards, rm_scores, kl_penalty = trainer.compute_rewards(
-            #     input_ids, attention_mask, old_log_probs, ref_log_probs
-            # )
+            # 4. PPO 多轮更新
+            for _ in range(ppo_epochs):
+                stats = trainer.ppo_step(
+                    generated, None, old_log_probs, advantages, returns, old_values)
             
-            # ========== 阶段 3: 计算优势 ==========
-            # advantages, returns = trainer.compute_advantages(rewards, old_values)
-            
-            # ========== 阶段 4: PPO 多轮更新 ==========
-            for ppo_epoch in range(ppo_epochs):
-                pass  # stats = trainer.ppo_step(...)
-            
-            # ========== 阶段 5: 更新 KL 系数 ==========
-            # kl_actual = kl_penalty.mean().item()
-            # trainer.update_kl_coef(kl_actual)
+            # 5. 自适应 KL 系数
+            trainer.update_kl_coef(kl.mean().item())
         
-        # 打印 epoch 统计
-        print(f"Epoch {epoch + 1}/{n_epochs} 完成")
-
-print("RLHF 训练循环定义完成")
-print("注: 完整运行需要实际的语言模型 (如 GPT-2) 和 tokenizer")
+        print(f"Epoch {epoch+1}/{n_epochs} 完成")
 ```
 
-#### 6.2.4 奖励模型训练完整示例
+#### 6.2.4 奖励模型训练示例
 
 ```python
-def train_reward_model(model, train_data, val_data, 
-                       epochs=3, lr=1e-5, batch_size=16):
-    """
-    训练奖励模型
-    
-    参数:
-        model: RewardModel 实例
-        train_data: list of (input_w, input_l) 对
-        val_data: 验证集
-        epochs: 训练轮数
-        lr: 学习率
-    """
+def train_reward_model(model, train_data, val_data, epochs=3, lr=1e-5, batch_size=16):
+    """训练奖励模型"""
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
     criterion = RewardModelLoss()
     
     for epoch in range(epochs):
         model.train()
-        total_loss, total_acc = 0.0, 0.0
-        n_batches = 0
+        total_loss, total_acc, n = 0.0, 0.0, 0
         
         for i in range(0, len(train_data), batch_size):
             batch = train_data[i:i+batch_size]
             input_w = torch.stack([b[0] for b in batch])
             input_l = torch.stack([b[1] for b in batch])
             
-            rewards_w = model(input_w)
-            rewards_l = model(input_l)
-            loss, acc = criterion(rewards_w, rewards_l)
-            
+            loss, acc = criterion(model(input_w), model(input_l))
             optimizer.zero_grad()
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
-            
-            total_loss += loss.item()
-            total_acc += acc.item()
-            n_batches += 1
-        
-        avg_loss = total_loss / n_batches
-        avg_acc = total_acc / n_batches
+            total_loss += loss.item(); total_acc += acc.item(); n += 1
         
         # 验证
         model.eval()
-        val_loss, val_acc, val_n = 0.0, 0.0, 0
+        val_loss, val_acc, vn = 0.0, 0.0, 0
         with torch.no_grad():
             for i in range(0, len(val_data), batch_size):
                 batch = val_data[i:i+batch_size]
-                input_w = torch.stack([b[0] for b in batch])
-                input_l = torch.stack([b[1] for b in batch])
-                
-                rewards_w = model(input_w)
-                rewards_l = model(input_l)
-                loss, acc = criterion(rewards_w, rewards_l)
-                
-                val_loss += loss.item()
-                val_acc += acc.item()
-                val_n += 1
+                loss, acc = criterion(
+                    model(torch.stack([b[0] for b in batch])),
+                    model(torch.stack([b[1] for b in batch])))
+                val_loss += loss.item(); val_acc += acc.item(); vn += 1
         
-        val_loss /= max(val_n, 1)
-        val_acc /= max(val_n, 1)
-        
-        print(f"Epoch {epoch+1}: train_loss={avg_loss:.4f}, train_acc={avg_acc:.2%}, "
-              f"val_loss={val_loss:.4f}, val_acc={val_acc:.2%}")
+        print(f"Epoch {epoch+1}: loss={total_loss/n:.4f} acc={total_acc/n:.2%} "
+              f"val_loss={val_loss/vn:.4f} val_acc={val_acc/vn:.2%}")
 
 # ===== 验证 =====
 torch.manual_seed(42)
-vocab_size = 500
-T = 24
-
+vocab_size, T = 500, 24
 model = RewardModel(vocab_size, d_model=64, n_heads=2, n_layers=2)
 
-# 生成模拟数据: 偏好回答用较低 token id (模拟 "更好" 的回答)
-train_data = []
-for _ in range(200):
-    input_w = torch.randint(0, vocab_size // 2, (T,))   # "好" 回答
-    input_l = torch.randint(vocab_size // 2, vocab_size, (T,))  # "差" 回答
-    train_data.append((input_w, input_l))
-
-val_data = []
-for _ in range(50):
-    input_w = torch.randint(0, vocab_size // 2, (T,))
-    input_l = torch.randint(vocab_size // 2, vocab_size, (T,))
-    val_data.append((input_w, input_l))
-
+train_data = [(torch.randint(0, 250, (T,)), torch.randint(250, 500, (T,))) for _ in range(200)]
+val_data = [(torch.randint(0, 250, (T,)), torch.randint(250, 500, (T,))) for _ in range(50)]
 train_reward_model(model, train_data, val_data, epochs=3, lr=3e-4)
 ```
 
@@ -1403,86 +1225,32 @@ train_reward_model(model, train_data, val_data, epochs=3, lr=3e-4)
 import numpy as np
 
 def visualize_reward_distribution():
-    """可视化奖励模型的分数分布"""
+    """可视化不同训练阶段的奖励分布"""
     np.random.seed(42)
+    distributions = {
+        "SFT基线": np.random.normal(0.0, 1.5, 1000),
+        "RLHF初期": np.random.normal(0.5, 1.2, 1000),
+        "RLHF后期": np.random.normal(1.5, 0.8, 1000),
+    }
     
-    # 模拟不同训练阶段的奖励分布
-    # SFT 模型: 中等奖励，方差较大
-    sft_rewards = np.random.normal(0.0, 1.5, 1000)
-    # RLHF 初期: 奖励略微提升
-    rlhf_early = np.random.normal(0.5, 1.2, 1000)
-    # RLHF 后期: 奖励显著提升，方差减小
-    rlhf_late = np.random.normal(1.5, 0.8, 1000)
-    
-    print("=" * 60)
-    print("奖励分布统计")
-    print("=" * 60)
-    print(f"{'阶段':<15} {'均值':>8} {'标准差':>8} {'中位数':>8} {'>0比例':>8}")
-    print("-" * 60)
-    
-    for name, data in [("SFT基线", sft_rewards), 
-                        ("RLHF初期", rlhf_early),
-                        ("RLHF后期", rlhf_late)]:
-        print(f"{name:<15} {data.mean():>8.3f} {data.std():>8.3f} "
-              f"{np.median(data):>8.3f} {(data > 0).mean():>8.1%}")
-    
-    print("\n奖励提升 (vs SFT):")
-    print(f"  RLHF 初期: +{rlhf_early.mean() - sft_rewards.mean():.3f}")
-    print(f"  RLHF 后期: +{rlhf_late.mean() - sft_rewards.mean():.3f}")
+    print(f"{'阶段':<12} {'均值':>8} {'标准差':>8} {'>0比例':>8}")
+    print("-" * 40)
+    for name, data in distributions.items():
+        print(f"{name:<12} {data.mean():>8.3f} {data.std():>8.3f} {(data > 0).mean():>8.1%}")
 
 visualize_reward_distribution()
 ```
 
 ### 7.2 PPO 训练动态监控
 
-关键监控指标：
+关键监控指标及健康范围：
 
-```python
-def monitor_ppo_training():
-    """模拟 PPO 训练过程的关键指标"""
-    np.random.seed(42)
-    n_steps = 50
-    
-    # 模拟训练曲线
-    steps = np.arange(n_steps)
-    
-    # 奖励: 逐步上升后趋于稳定
-    reward = 0.5 * np.tanh(0.1 * steps) + np.random.randn(n_steps) * 0.05 + 0.3
-    
-    # KL 散度: 先上升后被约束稳定
-    kl = 3.0 + 4.0 * (1 - np.exp(-0.05 * steps)) + np.random.randn(n_steps) * 0.5
-    
-    # Clip 比例: 应在 0.1~0.3 之间
-    clip_frac = 0.15 + 0.05 * np.sin(0.2 * steps) + np.random.randn(n_steps) * 0.02
-    clip_frac = np.clip(clip_frac, 0.0, 1.0)
-    
-    # 策略熵: 缓慢下降 (策略变得更确定)
-    entropy = 4.0 - 0.02 * steps + np.random.randn(n_steps) * 0.1
-    
-    print("=" * 80)
-    print("PPO 训练监控面板")
-    print("=" * 80)
-    print(f"{'Step':>5} {'Reward':>8} {'KL':>8} {'ClipFrac':>10} {'Entropy':>8} {'状态':>8}")
-    print("-" * 80)
-    
-    for i in range(0, n_steps, 5):
-        status = "✅" if 2.0 < kl[i] < 10.0 else ("⚠️" if kl[i] > 10.0 else "📉")
-        print(f"{i:>5d} {reward[i]:>8.3f} {kl[i]:>8.2f} {clip_frac[i]:>10.3f} "
-              f"{entropy[i]:>8.3f} {status:>8}")
-    
-    print("\n" + "=" * 80)
-    print("训练健康检查:")
-    print(f"  ✅ 平均奖励趋势: {np.polyfit(steps, reward, 1)[0]:.4f}/step "
-          f"({'上升' if np.polyfit(steps, reward, 1)[0] > 0 else '下降'})")
-    print(f"  {'✅' if np.mean(kl) < 12 else '⚠️'} 平均 KL: {np.mean(kl):.2f} "
-          f"(目标: 6.0)")
-    print(f"  {'✅' if 0.05 < np.mean(clip_frac) < 0.3 else '⚠️'} 平均 Clip 比例: "
-          f"{np.mean(clip_frac):.3f} (健康范围: 0.05~0.30)")
-    print(f"  {'✅' if np.mean(entropy) > 1.0 else '⚠️'} 平均熵: {np.mean(entropy):.3f} "
-          f"(应 > 1.0)")
-
-monitor_ppo_training()
-```
+| 指标 | 健康范围 | 异常信号 |
+|------|----------|----------|
+| KL 散度 | $2.0 \sim 10.0$ | > 15 → KL 爆炸 |
+| Clip 比例 | $0.05 \sim 0.30$ | > 0.5 → 步长过大 |
+| 策略熵 | > $1.0$ | 快速下降 → mode collapse |
+| 奖励趋势 | 缓慢上升 | 突然飙升 → reward hacking |
 
 ### 7.3 调参建议与常见陷阱
 
@@ -1677,12 +1445,7 @@ $$
 
 > **Q:** 如何判断训练是否出现了奖励作弊？
 >
-> **A:** 关键监控指标：
->
-> 1. **奖励-KL 曲线**：正常情况下 KL 增加伴随奖励缓慢上升；异常时奖励突然飙升
-> 2. **人工抽检**：定期抽样检查生成质量
-> 3. **Gold RM**：用独立的（更大的）奖励模型交叉验证
-> 4. **多样性指标**：生成回答的 distinct-n 突然下降表明 mode collapse
+> **A:** 关键监控：(1) 奖励-KL 曲线异常飙升；(2) 人工抽检生成质量；(3) 用独立更大 RM 交叉验证（Gold RM）；(4) distinct-n 多样性突然下降表明 mode collapse。
 >
 > $$\text{Reward Hacking 信号}: \quad \frac{d R_\phi}{d \text{KL}} \gg \text{正常速率}$$
 
@@ -1690,16 +1453,7 @@ $$
 
 > **Q:** InstructGPT 只用了约 33K 比较数据，这够吗？
 >
-> **A:** 关键不在数量而在质量：
->
-> | 数据属性 | 重要性 | InstructGPT 做法 |
-> |----------|--------|-----------------|
-> | 标注者一致性 | ⭐⭐⭐⭐⭐ | 选拔 + 培训 + 一致性检验 |
-> | Prompt 多样性 | ⭐⭐⭐⭐ | 覆盖多种任务类型 |
-> | 排序而非打分 | ⭐⭐⭐⭐ | K 路排序 → $O(K^2)$ 配对 |
-> | 数据量 | ⭐⭐⭐ | 33K 比较（$K=4~9$） |
->
-> 33K 排序在 $K=4$ 时产生 ~198K 配对比较，足够训练 6B RM。
+> **A:** 关键不在数量而在质量。33K 排序在 $K=4$ 时产生 ~198K 配对比较，足够训练 6B RM。标注者一致性（选拔+培训+检验）和 Prompt 多样性比数据量更重要。
 
 ---
 
