@@ -38,7 +38,7 @@
 
 ### 1.1 从 RNN 到 Transformer：序列模型的演进
 
-在学习 Transformer 之前，我们已经学习了 [RNN](./RNN-Fundamentals.md)、[LSTM](./LSTM-Deep-Dive.md) 和 [GRU](./GRU-and-Seq2Seq.md)。这些模型都基于**递归**的思想：
+在学习 Transformer 之前，我们已经学习了 [RNN](./01-RNN-Fundamentals.md)、[LSTM](./02-LSTM-Deep-Dive.md) 和 [GRU](./05-GRU-and-Seq2Seq.md)。这些模型都基于**递归**的思想：
 
 **RNN 的核心问题**：
 
