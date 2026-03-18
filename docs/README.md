@@ -104,11 +104,18 @@ LLM Learning Notes 的完整笔记索引与导航。
 
 ---
 
-### 11–15：待实现
+### 11：Switch Transformer (Fedus, 2021)
+
+| 文档 | 说明 | 难度 | 前置知识 |
+|------|------|:----:|----------|
+| [Switch-Transformer-MoE](./11-Switch-Transformer-MoE.md) | MoE稀疏激活、Top-1路由、负载均衡损失、万亿参数训练 | ⭐⭐⭐⭐⭐ | Transformer/GPT-3基础 |
+
+---
+
+### 12–15：待实现
 
 | 编号 | 论文 | 年份 | 状态 |
 |------|------|------|------|
-| 11 | Switch Transformers (Fedus, 2021) | 2021 | 待写 |
 | 12 | LoRA (Hu, 2021) | 2021 | 待写 |
 | 13 | InstructGPT/RLHF (Ouyang, 2022) | 2022 | 待写 |
 | 14 | LLaMA (Touvron, 2023) | 2023 | 待写 |
