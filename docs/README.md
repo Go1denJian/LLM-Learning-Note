@@ -20,7 +20,7 @@ LLM Learning Notes 的完整笔记索引与导航。
 
 | 文档 | 说明 | 难度 | 前置知识 |
 |------|------|:----:|----------|
-| [Entropy-CrossEntropy-KL-Explained](./00-Foundation/Entropy-CrossEntropy-KL-Explained.md) | 信息论基础、交叉熵损失的本质 | ⭐⭐ | 概率论基础 |
+| [Entropy-CrossEntropy-KL-Explained](./00-Entropy-CrossEntropy-KL-Explained.md) | 信息论基础、交叉熵损失的本质 | ⭐⭐ | 概率论基础 |
 
 **内容概览**：
 - 信息量与熵的定义
@@ -115,7 +115,7 @@ LLM Learning Notes 的完整笔记索引与导航。
 
 | 文档 | 说明 | 难度 | 前置知识 |
 |------|------|:----:|----------|
-| [Transformer-Math-and-Implementation](./05-Transformer/Transformer-Math-and-Implementation.md) | 自注意力机制完整实现 | ⭐⭐⭐⭐⭐ | RNN/LSTM基础 |
+| [Transformer-Math-and-Implementation](./05-Transformer-Math-and-Implementation.md) | 自注意力机制完整实现 | ⭐⭐⭐⭐⭐ | RNN/LSTM基础 |
 
 **内容概览**：
 1. 引言：为什么 Transformer 需要数学
@@ -269,3 +269,4 @@ python examples/train_word2vec.py
 ---
 
 最后更新：2026-03-18
+6-03-18

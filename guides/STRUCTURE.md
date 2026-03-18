@@ -23,12 +23,14 @@ LLM-Learning-Note/
 │   ├── requirements.txt                    # Python 依赖
 │   └── .gitignore                          # Git 忽略规则
 │
-├── docs/                                # 学习笔记
+├── docs/                                # 学习笔记（扁平结构）
 │   ├── README.md                          # 文档中心入口
-│   ├── Word-Embedding-Math-and-Implementation.md
-│   ├── Transformer-Math-and-Implementation.md
-│   ├── README-Transformer.md
-│   └── REPOSITORY-ORGANIZATION.md
+│   ├── 00-Entropy-CrossEntropy-KL-Explained.md
+│   ├── 01-Word-Embedding-Math-and-Implementation.md
+│   ├── 02-RNN-Fundamentals.md
+│   ├── 03-LSTM-Deep-Dive.md
+│   ├── 04-GRU-and-Seq2Seq.md
+│   └── 05-Transformer-Math-and-Implementation.md
 │
 ├── src/                                 # 源代码
 │   ├── word2vec/

@@ -37,7 +37,7 @@
 
 | 文档 | 说明 | 难度 |
 |------|------|:----:|
-| [熵与KL散度](docs/00-Foundation/Entropy-CrossEntropy-KL-Explained.md) | 信息论基础、交叉熵损失的本质 | ⭐⭐ |
+| [熵与KL散度](docs/00-Entropy-CrossEntropy-KL-Explained.md) | 信息论基础、交叉熵损失的本质 | ⭐⭐ |
 
 ### 词嵌入篇
 
