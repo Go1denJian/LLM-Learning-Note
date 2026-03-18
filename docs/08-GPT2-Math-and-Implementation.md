@@ -218,13 +218,6 @@ $$
 
 其中 $W_p \in \mathbb{R}^{n_{\text{ctx}} \times d}$，$n_{\text{ctx}} = 1024$ 是最大上下文长度。
 
-**BPE 分词示例**：
-
-```
-"GPT-2 is amazing!" → ["GPT", "-", "2", " is", " amazing", "!"]
-"unhappiness"       → ["un", "happiness"]
-```
-
 > **Q:** 为什么 GPT-2 用 BPE 而不是 BERT 的 WordPiece？
 >
 > **A:** BPE 基于字节（byte-level），可以编码任意 Unicode 文本而无 OOV 问题。WordPiece 基于字符，需要预定义字符集。对于生成模型，处理任意输入的能力尤为重要。
@@ -1087,15 +1080,9 @@ $$
 
 最终选择得分最高的完整序列。典型 beam width $B \in \{4, 5, 10\}$。
 
-**Beam Search 的长度惩罚**：
+通常结合长度惩罚 $\text{score} = \log P(y_{1:T}) / T^\alpha$（$\alpha \in [0.6, 1.0]$）。
 
-$$
-\text{score}_{\text{normalized}} = \frac{\log P(y_{1:T})}{T^\alpha}
-$$
-
-其中 $\alpha \in [0.6, 1.0]$ 是长度惩罚因子。
-
-> **问题**：对于开放式生成（如故事续写），贪心搜索和 Beam Search 都倾向于生成**安全但无趣**的文本。
+> **问题**：对于开放式生成，贪心和 Beam Search 都倾向于生成**安全但无趣**的文本。
 
 ### 7.2 温度采样
 
