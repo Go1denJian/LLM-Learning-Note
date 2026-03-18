@@ -1,586 +1,618 @@
-# BERT 数学原理与实现 —— 双向编码的预训练革命
+# BERT 数学原理与实现 —— 双向预训练的完整推导
 
-> **前置知识**：Transformer Encoder 架构、注意力机制、交叉熵损失、Python 基础  
-> **与前面内容的联系**：建议先学习 [Transformer-Math-and-Implementation](./06-Transformer-Math-and-Implementation.md)，理解自注意力与编码器架构  
-> **与后续内容的联系**：BERT 开启了"预训练 + 微调"范式，是理解 GPT-2、T5 等后续模型的关键
+> **前置知识**：Transformer 编码器、Attention 机制、交叉熵损失、Python 基础  
+> **与前面内容的联系**：建议先学习 [Transformer-Math-and-Implementation](./06-Transformer-Math-and-Implementation.md)，理解自注意力和编码器架构  
+> **与后续内容的联系**：BERT 是预训练+微调范式的开创者，GPT-2 采用相反的单向自回归路线
 
 ---
 
 ## 目录
 
-1. [引言：为什么需要 BERT？](#1-引言为什么需要-bert)
-   - 1.1 [从单向到双向：语言模型的局限](#11-从单向到双向语言模型的局限)
-   - 1.2 [预训练 + 微调范式的诞生](#12-预训练--微调范式的诞生)
+1. [引言：为什么需要双向预训练？](#1-引言为什么需要双向预训练)
+   - 1.1 [从特征提取到预训练：NLP 范式的演进](#11-从特征提取到预训练nlp-范式的演进)
+   - 1.2 [单向语言模型的局限性](#12-单向语言模型的局限性)
    - 1.3 [本科数学知识映射表](#13-本科数学知识映射表)
-2. [基础概念：BERT 的核心思想](#2-基础概念bert-的核心思想)
-   - 2.1 [双向编码 vs 单向编码](#21-双向编码-vs-单向编码)
-   - 2.2 [输入表示：三重嵌入](#22-输入表示三重嵌入)
-   - 2.3 [特殊标记的作用](#23-特殊标记的作用)
-3. [核心算法：双向 Attention 与预训练任务](#3-核心算法双向-attention-与预训练任务)
-   - 3.1 [双向自注意力的掩码机制](#31-双向自注意力的掩码机制)
-   - 3.2 [Masked Language Model (MLM)](#32-masked-language-model-mlm)
-   - 3.3 [Next Sentence Prediction (NSP)](#33-next-sentence-prediction-nsp)
-4. [梯度推导与参数更新](#4-梯度推导与参数更新)
-   - 4.1 [MLM 损失的梯度推导](#41-mlm-损失的梯度推导)
-   - 4.2 [NSP 损失的梯度推导](#42-nsp-损失的梯度推导)
-   - 4.3 [联合损失与多任务学习](#43-联合损失与多任务学习)
+2. [核心思想：双向编码与掩码语言模型](#2-核心思想双向编码与掩码语言模型)
+   - 2.1 [双向上下文表示](#21-双向上下文表示)
+   - 2.2 [MLM：完形填空式预训练](#22-mlm完形填空式预训练)
+   - 2.3 [NSP：句对关系预训练](#23-nsp句对关系预训练)
+3. [BERT 架构的数学描述](#3-bert-架构的数学描述)
+   - 3.1 [输入表示：三种嵌入的叠加](#31-输入表示三种嵌入的叠加)
+   - 3.2 [双向 Attention 掩码](#32-双向-attention-掩码)
+   - 3.3 [Transformer 编码器层](#33-transformer-编码器层)
+   - 3.4 [BERT-Base 与 BERT-Large 配置](#34-bert-base-与-bert-large-配置)
+4. [预训练目标的数学推导](#4-预训练目标的数学推导)
+   - 4.1 [MLM 损失函数](#41-mlm-损失函数)
+   - 4.2 [NSP 损失函数](#42-nsp-损失函数)
+   - 4.3 [联合损失与梯度分析](#43-联合损失与梯度分析)
 5. [训练优化方法总结](#5-训练优化方法总结)
-   - 5.1 [AdamW 优化器](#51-adamw-优化器)
-   - 5.2 [学习率预热与线性衰减](#52-学习率预热与线性衰减)
-   - 5.3 [大批量训练策略](#53-大批量训练策略)
+   - 5.1 [预训练策略](#51-预训练策略)
+   - 5.2 [微调策略](#52-微调策略)
+   - 5.3 [优化器与学习率调度](#53-优化器与学习率调度)
 6. [从数学到代码：完整实现](#6-从数学到代码完整实现)
    - 6.1 [NumPy 实现核心组件](#61-numpy-实现核心组件)
    - 6.2 [PyTorch 完整实现](#62-pytorch-完整实现)
 7. [实践技巧与可视化](#7-实践技巧与可视化)
    - 7.1 [注意力可视化](#71-注意力可视化)
-   - 7.2 [微调最佳实践](#72-微调最佳实践)
+   - 7.2 [MLM 掩码策略分析](#72-mlm-掩码策略分析)
+   - 7.3 [微调实战技巧](#73-微调实战技巧)
 8. [与其他模型的关系](#8-与其他模型的关系)
-   - 8.1 [BERT vs GPT：编码器 vs 解码器](#81-bert-vs-gpt编码器-vs-解码器)
-   - 8.2 [BERT 的后继者们](#82-bert-的后继者们)
-9. [扩展阅读与实现](#扩展阅读与实现)
-   - 9.1 [Whole Word Masking 的数学分析](#91-whole-word-masking-的数学分析)
-   - 9.2 [为什么 NSP 后来被质疑？](#92-为什么-nsp-后来被质疑)
-   - 9.3 [BERT 的参数效率分析](#93-bert-的参数效率分析)
-10. [参考资源](#参考资源)
+   - 8.1 [BERT vs GPT：双向 vs 单向](#81-bert-vs-gpt双向-vs-单向)
+   - 8.2 [BERT 的后续发展](#82-bert-的后续发展)
+   - 8.3 [预训练范式总结](#83-预训练范式总结)
 
-[附录：符号表](#附录符号表)
+[扩展阅读与实现](#扩展阅读与实现)
+
+[参考资源](#参考资源)
+
+附录：[符号表](#附录符号表)
 
 ---
 
-## 1. 引言：为什么需要 BERT？
+## 1. 引言：为什么需要双向预训练？
 
-### 1.1 从单向到双向：语言模型的局限
+### 1.1 从特征提取到预训练：NLP 范式的演进
 
-在 BERT 之前，主流的语言模型（如 ELMo、GPT-1）都基于**单向**建模：
+在 BERT 出现之前，NLP 经历了三个范式阶段：
 
-**单向语言模型（GPT 风格）**：
+**范式 1：特征工程时代**（2000s 之前）
 
-$$
-P(w_1, w_2, \ldots, w_n) = \prod_{t=1}^n P(w_t \mid w_1, \ldots, w_{t-1})
-$$
-
-每个词只能看到**左侧上下文**。
-
-**双向语言模型（ELMo 风格）**：
-
-ELMo 使用两个独立的单向 LSTM 拼接：
+手工设计特征（TF-IDF、n-gram 等），然后用传统分类器：
 
 $$
-\overrightarrow{h}_t = \text{LSTM}_{\text{forward}}(w_t, \overrightarrow{h}_{t-1})
+y = f_{\theta}(\phi(x))
 $$
+
+其中 $\phi(x)$ 是手工特征，$f_{\theta}$ 是分类器（SVM、逻辑回归等）。
+
+**范式 2：词向量时代**（2013-2017）
+
+使用 [Word2Vec](./03-Word2Vec-Math-and-Implementation.md) 或 [GloVe](./04-GloVe-Math-and-Implementation.md) 学习静态词向量：
+
 $$
-\overleftarrow{h}_t = \text{LSTM}_{\text{backward}}(w_t, \overleftarrow{h}_{t+1})
+\text{embedding}(w) = E[w] \in \mathbb{R}^d
 $$
+
+**核心问题**：词向量是**静态**的。同一个词在不同上下文中具有相同的表示：
+
+| 句子 | "bank" 的含义 | 词向量 |
+|------|-------------|--------|
+| "I went to the **bank** to deposit money" | 银行 | 相同 |
+| "The river **bank** was covered with flowers" | 河岸 | 相同 |
+
+**范式 3：上下文表示时代**（2018—）
+
+ELMo（2018）首先提出用**双向 LSTM** 生成上下文相关的词表示：
+
+$$
+h_t^{\text{ELMo}} = \gamma \sum_{j=0}^L s_j \cdot h_{t,j}
+$$
+
+但 ELMo 有一个关键限制：前向和后向 LSTM 是**独立训练**的，然后简单拼接：
+
 $$
 h_t^{\text{ELMo}} = [\overrightarrow{h}_t; \overleftarrow{h}_t]
 $$
 
-**ELMo 的问题**：左右方向是**独立训练**的，然后简单拼接——并非真正的双向交互。
+这意味着前向 LSTM 看不到右边的上下文，后向 LSTM 看不到左边的上下文。两者虽然拼接在一起，但**从未在同一层中交互**。
 
-**BERT 的突破**：
+**BERT 的革命**：
 
-> **通过 Masked Language Model，让每个位置同时看到左右两侧的全部上下文**
-
-$$
-P(w_t \mid w_1, \ldots, w_{t-1}, w_{t+1}, \ldots, w_n) \quad \text{（真正的双向条件概率）}
-$$
-
-**对比总结**：
-
-| 模型 | 方向 | 上下文利用 | 训练信号 |
-|------|------|-----------|---------|
-| GPT | 单向（左→右） | 仅左侧 | 自回归 LM |
-| ELMo | 伪双向（拼接） | 左右独立 | 双向 LM |
-| **BERT** | **真双向** | **左右交互** | **MLM + NSP** |
-
-### 1.2 预训练 + 微调范式的诞生
-
-BERT 正式确立了 NLP 的"两阶段"范式：
-
-**阶段 1：预训练（Pre-training）**
-
-在大规模无标注语料上学习通用语言表示：
+> **在同一个注意力层中，让每个词同时关注左右两边的所有词**
 
 $$
-\theta^* = \arg\min_\theta \mathcal{L}_{\text{pretrain}}(\theta) = \arg\min_\theta \left(\mathcal{L}_{\text{MLM}} + \mathcal{L}_{\text{NSP}}\right)
+\boxed{h_t^{\text{BERT}} = \text{TransformerEncoder}(x_1, x_2, \ldots, x_n)_t}
 $$
 
-**阶段 2：微调（Fine-tuning）**
+每个位置 $t$ 的输出 $h_t$ 都融合了**整个序列**的信息。
 
-在下游任务的标注数据上微调所有参数：
+### 1.2 单向语言模型的局限性
+
+传统语言模型（包括 GPT）采用**单向**（从左到右）建模：
 
 $$
-\theta^{**} = \arg\min_\theta \mathcal{L}_{\text{task}}(\theta; \theta^*)
+P(x_1, x_2, \ldots, x_n) = \prod_{t=1}^n P(x_t \mid x_1, \ldots, x_{t-1})
 $$
 
-**关键洞察**：预训练的参数 $\theta^*$ 提供了良好的初始化，使得微调只需少量标注数据即可达到优异性能。
+**问题**：预测 $x_t$ 时只能利用左侧上下文 $x_{<t}$。
+
+**示例**：
+
+> "I went to the [MASK] to deposit money."
+
+- **单向模型**：只能根据 "I went to the" 猜测，信息不足
+- **双向模型**：同时利用 "I went to the" 和 "to deposit money"，能更准确地推断是 "bank"
+
+**数学上的区别**：
+
+| 模型类型 | 条件分布 | 信息利用 |
+|---------|---------|---------|
+| 单向（GPT） | $P(x_t \mid x_{<t})$ | 仅左侧上下文 |
+| 双向独立（ELMo） | $[\overrightarrow{P}(x_t \mid x_{<t}); \overleftarrow{P}(x_t \mid x_{>t})]$ | 左右独立 |
+| 真正双向（BERT） | $P(x_t \mid x_{\backslash t})$ | 左右同时交互 |
+
+其中 $x_{\backslash t}$ 表示除位置 $t$ 以外的所有 token。
 
 ### 1.3 本科数学知识映射表
 
 | 数学概念 | BERT 中的应用 | 代码对应 |
 |---------|-------------|---------|
-| 矩阵乘法 | 自注意力计算 | `torch.matmul(Q, K.T)` |
-| Softmax | 注意力权重归一化 | `F.softmax(scores, dim=-1)` |
-| 交叉熵 | MLM/NSP 损失函数 | `F.cross_entropy()` |
-| 概率论（条件概率） | 双向语言建模 | MLM 预测被掩码的词 |
-| 伯努利分布 | 掩码采样策略 | `torch.bernoulli()` |
-| 二分类交叉熵 | NSP 损失 | `F.binary_cross_entropy()` |
-| 向量拼接 | 三重嵌入求和 | `token_emb + seg_emb + pos_emb` |
+| 交叉熵 $H(p, q)$ | MLM/NSP 损失函数 | `F.cross_entropy()` |
+| Softmax 函数 | 注意力权重 + 分类头 | `F.softmax()` |
+| 矩阵乘法 $AB$ | 自注意力计算 | `torch.matmul()` |
+| 向量加法 | 三种嵌入叠加 | `token_emb + seg_emb + pos_emb` |
+| 概率论（条件概率） | 掩码语言模型目标 | MLM 概率预测 |
+| 二分类（Sigmoid） | 句对预测 | `torch.sigmoid()` |
+| 随机采样 | 掩码策略（80/10/10） | `torch.bernoulli()` |
 
 ---
 
-## 2. 基础概念：BERT 的核心思想
+## 2. 核心思想：双向编码与掩码语言模型
 
-### 2.1 双向编码 vs 单向编码
+### 2.1 双向上下文表示
 
-**数学定义**：
+BERT 的核心洞察：**不需要修改 Transformer 架构本身**，只需要改变**训练目标**。
 
-给定输入序列 $\mathbf{x} = (x_1, x_2, \ldots, x_n)$，BERT Encoder 的第 $l$ 层输出为：
-
-$$
-H^{(l)} = \text{TransformerBlock}(H^{(l-1)}) \in \mathbb{R}^{n \times d}
-$$
-
-其中每个 $h_t^{(l)}$（第 $t$ 个位置的隐藏向量）依赖于**所有位置**的输入：
+标准 Transformer 编码器本身就是双向的：
 
 $$
-h_t^{(l)} = f(h_1^{(l-1)}, h_2^{(l-1)}, \ldots, h_n^{(l-1)})
+\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
 $$
 
-**与单向模型的关键区别**：
-
-在 GPT（单向解码器）中，位置 $t$ 只能看到 $\{1, 2, \ldots, t\}$：
+在编码器中，注意力矩阵 $A \in \mathbb{R}^{n \times n}$ 的每个元素 $A_{ij}$ 都是非零的（没有因果掩码），这意味着：
 
 $$
-h_t^{(l)} = f(h_1^{(l-1)}, h_2^{(l-1)}, \ldots, h_t^{(l-1)}) \quad \text{（GPT：因果掩码）}
+A_{ij} = \frac{\exp(q_i^\top k_j / \sqrt{d_k})}{\sum_{m=1}^n \exp(q_i^\top k_m / \sqrt{d_k})} > 0, \quad \forall i, j
 $$
 
-而在 BERT（双向编码器）中，位置 $t$ 可以看到**所有**位置 $\{1, 2, \ldots, n\}$：
+> **关键区别**：
+> - **GPT（解码器）**：使用因果掩码，$A_{ij} = 0$ 当 $j > i$（不能看到未来）
+> - **BERT（编码器）**：不使用因果掩码，每个位置都能看到所有位置
 
 $$
-\boxed{h_t^{(l)} = f(h_1^{(l-1)}, h_2^{(l-1)}, \ldots, h_n^{(l-1)}) \quad \text{（BERT：无因果掩码）}}
+\boxed{
+M^{\text{BERT}}_{ij} = 1 \quad \forall i, j \in \{1, \ldots, n\}
+}
 $$
 
-### 2.2 输入表示：三重嵌入
-
-BERT 的输入由三个嵌入相加构成：
-
 $$
-\boxed{E_{\text{input}} = E_{\text{token}} + E_{\text{segment}} + E_{\text{position}}}
+M^{\text{GPT}}_{ij} = \begin{cases} 1 & \text{if } j \leq i \\ 0 & \text{otherwise} \end{cases}
 $$
 
-**Token Embedding** $E_{\text{token}} \in \mathbb{R}^{|V| \times d}$：
+### 2.2 MLM：完形填空式预训练
 
-将每个 WordPiece token 映射为 $d$ 维向量：
-$$
-e_{\text{token}}(x_t) = E_{\text{token}}[x_t] \in \mathbb{R}^d
-$$
+**问题**：既然编码器是双向的，就不能用传统语言模型目标（会导致信息泄露——要预测的词已经能看到自己）。
 
-**Segment Embedding** $E_{\text{segment}} \in \mathbb{R}^{2 \times d}$：
+**BERT 的解决方案**：**Masked Language Model (MLM)**
 
-区分句子 A 和句子 B（仅两个可学习向量）：
-$$
-e_{\text{segment}}(x_t) = \begin{cases}
-E_{\text{segment}}[0] & \text{if } x_t \in \text{Sentence A} \\
-E_{\text{segment}}[1] & \text{if } x_t \in \text{Sentence B}
-\end{cases}
-$$
+随机选择输入序列中 15% 的 token 进行掩码，然后预测被掩码的 token。
 
-**Position Embedding** $E_{\text{position}} \in \mathbb{R}^{L_{\max} \times d}$：
+**掩码策略**（80/10/10 规则）：
 
-BERT 使用**可学习**的位置嵌入（不同于 Transformer 原文的正弦编码）：
-$$
-e_{\text{position}}(t) = E_{\text{position}}[t] \in \mathbb{R}^d, \quad t \in \{0, 1, \ldots, L_{\max}-1\}
-$$
+对于被选中的 token $x_t$：
 
-**完整输入**（位置 $t$）：
-$$
-h_t^{(0)} = e_{\text{token}}(x_t) + e_{\text{segment}}(x_t) + e_{\text{position}}(t)
-$$
+| 操作 | 概率 | 替换为 | 目的 |
+|------|------|--------|------|
+| 替换为 `[MASK]` | 80% | `[MASK]` 特殊标记 | 主要学习信号 |
+| 替换为随机词 | 10% | 词表中随机 token | 增强鲁棒性 |
+| 保持不变 | 10% | 原始 token | 对齐预训练与微调 |
 
-### 2.3 特殊标记的作用
+**数学表述**：
 
-BERT 引入两个特殊标记：
-
-**[CLS]**（Classification Token）：
-- 放在序列开头（位置 0）
-- 经过多层 Transformer 后，其隐藏向量 $h_{\text{[CLS]}}^{(L)}$ 用作**句子级表示**
-- 用于 NSP 分类和下游分类任务
-
-**[SEP]**（Separator Token）：
-- 放在每个句子末尾，分隔句子 A 和 B
-- 帮助模型识别句子边界
-
-**输入格式示例**：
-
-```
-[CLS] I love NLP [SEP] It is fascinating [SEP]
-  0    1   2   3    4    5  6      7        8    ← 位置编号
-  A    A   A   A    A    B  B      B        B    ← Segment ID
-```
-
----
-
-## 3. 核心算法：双向 Attention 与预训练任务
-
-### 3.1 双向自注意力的掩码机制
-
-**Transformer Encoder 的自注意力**：
+设 $\mathcal{M}$ 为被掩码位置的集合（约 15% 的位置），则 MLM 目标为：
 
 $$
-\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^\top}{\sqrt{d_k}} + M\right)V
+\mathcal{L}_{\text{MLM}} = -\sum_{t \in \mathcal{M}} \log P(x_t \mid \tilde{x})
 $$
 
-其中 $M \in \mathbb{R}^{n \times n}$ 是**注意力掩码矩阵**。
+其中 $\tilde{x}$ 是经过掩码处理后的输入序列。
 
-**BERT（双向）的掩码**：
-
-$$
-M_{ij}^{\text{BERT}} = \begin{cases}
-0 & \text{if position } j \text{ is valid (non-padding)} \\
--\infty & \text{if position } j \text{ is padding}
-\end{cases}
-$$
-
-**关键区别**：BERT 只需处理 padding 掩码，**不需要因果掩码**。
-
-$$
-\boxed{M^{\text{BERT}} = \begin{bmatrix}
-0 & 0 & 0 & -\infty \\
-0 & 0 & 0 & -\infty \\
-0 & 0 & 0 & -\infty \\
-0 & 0 & 0 & -\infty
-\end{bmatrix} \quad \text{（最后一位是 padding）}}
-$$
-
-**对比 GPT（单向）的因果掩码**：
-
-$$
-M^{\text{GPT}} = \begin{bmatrix}
-0 & -\infty & -\infty & -\infty \\
-0 & 0 & -\infty & -\infty \\
-0 & 0 & 0 & -\infty \\
-0 & 0 & 0 & 0
-\end{bmatrix} \quad \text{（上三角为 $-\infty$）}
-$$
-
-**Softmax 后的注意力权重**：
-
-BERT 中，对于非 padding 位置：
-$$
-\alpha_{ij}^{\text{BERT}} = \frac{\exp(q_i^\top k_j / \sqrt{d_k})}{\sum_{k \in \text{valid}} \exp(q_i^\top k_k / \sqrt{d_k})} > 0 \quad \forall j \in \text{valid positions}
-$$
-
-每个位置都能关注到所有其他有效位置，实现了**真正的双向交互**。
-
-### 3.2 Masked Language Model (MLM)
-
-**动机**：直接使用双向编码器训练传统语言模型会导致"信息泄露"——每个词能通过多层注意力间接"看到自己"。
-
-**解决方案**：随机掩码部分输入 token，让模型预测被掩码的原始 token。
-
-#### 3.2.1 掩码策略
-
-对于输入序列中的每个 token $x_t$，以概率 $p = 0.15$ 被选中进行掩码。选中后：
-
-$$
-\tilde{x}_t = \begin{cases}
-\text{[MASK]} & \text{with probability } 0.80 \\
-x_{\text{random}} & \text{with probability } 0.10 \\
-x_t & \text{with probability } 0.10
-\end{cases}
-$$
-
-**设计理由**：
-
-| 策略 | 比例 | 目的 |
-|------|------|------|
-| 替换为 [MASK] | 80% | 主要学习信号 |
-| 替换为随机词 | 10% | 增加鲁棒性，防止模型只在 [MASK] 位置预测 |
-| 保持不变 | 10% | 减少预训练与微调的不匹配 |
-
-#### 3.2.2 MLM 损失函数
-
-设被掩码位置的集合为 $\mathcal{M}$，原始 token 为 $x_t$，BERT 在该位置的输出隐藏向量为 $h_t^{(L)}$。
-
-**预测分布**：
-
-$$
-P(x_t = w \mid \tilde{\mathbf{x}}) = \text{softmax}(W_{\text{MLM}} h_t^{(L)} + b_{\text{MLM}})_w
-$$
-
-其中 $W_{\text{MLM}} \in \mathbb{R}^{|V| \times d}$，$b_{\text{MLM}} \in \mathbb{R}^{|V|}$。
-
-> **注意**：在原始 BERT 实现中，$W_{\text{MLM}}$ 与 Token Embedding 矩阵 $E_{\text{token}}$ 共享权重（weight tying），并在 softmax 之前通过一个额外的线性变换 + GELU 激活 + LayerNorm：
+> **Q:** 为什么不 100% 使用 `[MASK]` 替换？
 >
-> $$h_t' = \text{LayerNorm}(\text{GELU}(W_{\text{proj}} h_t^{(L)} + b_{\text{proj}}))$$
-> $$P(x_t \mid \tilde{\mathbf{x}}) = \text{softmax}(E_{\text{token}} \cdot h_t' + b_{\text{MLM}})$$
+> **A:** 因为微调时输入中没有 `[MASK]` 标记。如果预训练时总是用 `[MASK]`，模型会学到"只在看到 `[MASK]` 时才需要预测"，导致预训练和微调之间的**分布不匹配（mismatch）**。10% 保持不变和 10% 随机替换缓解了这个问题。
 
-**MLM 损失**（交叉熵）：
+### 2.3 NSP：句对关系预训练
 
-$$
-\boxed{\mathcal{L}_{\text{MLM}} = -\frac{1}{|\mathcal{M}|} \sum_{t \in \mathcal{M}} \log P(x_t \mid \tilde{\mathbf{x}})}
-$$
+**动机**：许多下游任务需要理解**句子之间的关系**（如问答、自然语言推理）。
 
-**展开**：
+**Next Sentence Prediction (NSP)**：
 
-$$
-\mathcal{L}_{\text{MLM}} = -\frac{1}{|\mathcal{M}|} \sum_{t \in \mathcal{M}} \left[ \log \frac{\exp(w_{x_t}^\top h_t^{(L)} + b_{x_t})}{\sum_{w=1}^{|V|} \exp(w_w^\top h_t^{(L)} + b_w)} \right]
-$$
+给定两个句子 $A$ 和 $B$，判断 $B$ 是否是 $A$ 在原文中的下一句。
 
-其中 $w_{x_t}$ 是 $W_{\text{MLM}}$ 的第 $x_t$ 行。
+**数据构造**：
 
-#### 3.2.3 掩码比例的数学分析
+| 类型 | 标签 | 比例 | 示例 |
+|------|------|------|------|
+| 正样本 | IsNext | 50% | A = "我喜欢猫"，B = "它们很可爱" |
+| 负样本 | NotNext | 50% | A = "我喜欢猫"，B = "今天天气真好" |
 
-**为什么选择 15%？**
-
-设序列长度为 $n$，掩码比例为 $p$：
-
-- 每个样本的有效训练信号：$p \cdot n$ 个 token
-- 过高的 $p$：破坏上下文信息，模型难以理解语义
-- 过低的 $p$：训练信号稀疏，收敛缓慢
-
-**收敛速度分析**：
-
-每个 batch 的有效梯度更新量 $\propto p \cdot n \cdot B$（$B$ 为 batch size）。
-
-相比自回归模型（每个 token 都有训练信号），MLM 需要约 $1/p \approx 6.67$ 倍的训练步数才能获得等量的训练信号。
-
-> **Q:** 为什么不直接把所有 token 都掩码？
->
-> **A:** 如果掩码 100%，模型无法获取任何上下文信息，退化为独立预测每个词——失去了双向建模的意义。15% 是实验中发现的最优平衡点。
-
-### 3.3 Next Sentence Prediction (NSP)
-
-#### 3.3.1 任务定义
-
-给定句子对 $(A, B)$，判断 $B$ 是否是 $A$ 的**下一句**：
+**输入格式**：
 
 $$
-P(\text{IsNext} \mid A, B) = \sigma(w_{\text{NSP}}^\top h_{\text{[CLS]}}^{(L)} + b_{\text{NSP}})
+\text{Input} = [\texttt{[CLS]}] \; A_1 \; A_2 \; \ldots \; A_m \; [\texttt{[SEP]}] \; B_1 \; B_2 \; \ldots \; B_k \; [\texttt{[SEP]}]
 $$
 
-其中 $\sigma$ 是 sigmoid 函数，$h_{\text{[CLS]}}^{(L)}$ 是 [CLS] 标记的最终隐藏向量。
+其中 `[CLS]` 是分类标记（其最终隐藏状态用于 NSP 分类），`[SEP]` 是分隔标记。
 
-**训练数据构造**：
-
-| 类别 | 比例 | 构造方式 |
-|------|------|---------|
-| IsNext（正例） | 50% | $B$ 是 $A$ 的真实下一句 |
-| NotNext（负例） | 50% | $B$ 是从语料库随机采样的句子 |
-
-#### 3.3.2 NSP 损失函数
-
-使用二分类交叉熵：
+**NSP 目标**：
 
 $$
-\boxed{\mathcal{L}_{\text{NSP}} = -\left[y \log P(\text{IsNext}) + (1-y) \log(1 - P(\text{IsNext}))\right]}
+\mathcal{L}_{\text{NSP}} = -\left[ y \log P(\text{IsNext}) + (1 - y) \log P(\text{NotNext}) \right]
 $$
 
-其中 $y = 1$ 表示 IsNext，$y = 0$ 表示 NotNext。
-
-**等价形式**（使用双输出 softmax）：
-
-原始 BERT 实现使用 2-class softmax 而非 sigmoid：
+其中 $y \in \{0, 1\}$ 是真实标签，预测概率基于 `[CLS]` 位置的输出：
 
 $$
-P(\text{IsNext} \mid A, B) = \text{softmax}(W_{\text{NSP}} h_{\text{[CLS]}}^{(L)} + b_{\text{NSP}})
+P(\text{IsNext}) = \text{softmax}(W_{\text{NSP}} \cdot h_{\texttt{[CLS]}} + b_{\text{NSP}})
 $$
 
-其中 $W_{\text{NSP}} \in \mathbb{R}^{2 \times d}$，输出两个 logit。
-
-$$
-\mathcal{L}_{\text{NSP}} = -\log P(y \mid h_{\text{[CLS]}}^{(L)})
-$$
-
-#### 3.3.3 联合预训练损失
-
-BERT 的总预训练损失是 MLM 和 NSP 的简单相加：
-
-$$
-\boxed{\mathcal{L}_{\text{pretrain}} = \mathcal{L}_{\text{MLM}} + \mathcal{L}_{\text{NSP}}}
-$$
-
-> **注意**：原始论文中两个损失没有加权系数，直接相加。后续研究（如 RoBERTa）发现去掉 NSP 反而可以提升性能。
+> **注意**：后续研究（如 RoBERTa）发现 NSP 对下游任务的帮助有限，甚至可能有害。但作为 BERT 原始设计的一部分，理解 NSP 仍然很重要。
 
 ---
 
-## 4. 梯度推导与参数更新
+## 3. BERT 架构的数学描述
 
-### 4.1 MLM 损失的梯度推导
+### 3.1 输入表示：三种嵌入的叠加
 
-设 MLM 头的输出 logits 为：
-$$
-z_t = W_{\text{MLM}} h_t^{(L)} + b_{\text{MLM}} \in \mathbb{R}^{|V|}
-$$
-
-softmax 概率：
-$$
-p_{t,w} = \frac{\exp(z_{t,w})}{\sum_{w'=1}^{|V|} \exp(z_{t,w'})}
-$$
-
-交叉熵损失（对单个被掩码位置 $t$）：
-$$
-\mathcal{L}_t = -\log p_{t,x_t} = -z_{t,x_t} + \log \sum_{w'=1}^{|V|} \exp(z_{t,w'})
-$$
-
-**对 logits 的梯度**：
+BERT 的输入表示由**三种嵌入向量相加**得到：
 
 $$
-\frac{\partial \mathcal{L}_t}{\partial z_{t,w}} = p_{t,w} - \mathbb{1}[w = x_t]
+\boxed{E_{\text{input}}(t) = E_{\text{token}}(x_t) + E_{\text{segment}}(s_t) + E_{\text{position}}(t)}
 $$
 
-$$
-\boxed{\frac{\partial \mathcal{L}_t}{\partial z_t} = p_t - e_{x_t} \in \mathbb{R}^{|V|}}
-$$
+**1. Token 嵌入** $E_{\text{token}} \in \mathbb{R}^{|V| \times d}$
 
-其中 $e_{x_t}$ 是第 $x_t$ 个位置为 1 的 one-hot 向量。
-
-**对 MLM 权重矩阵的梯度**：
+将 WordPiece token 映射为 $d$ 维向量：
 
 $$
-\frac{\partial \mathcal{L}_t}{\partial W_{\text{MLM}}} = \frac{\partial \mathcal{L}_t}{\partial z_t} \cdot \frac{\partial z_t}{\partial W_{\text{MLM}}} = (p_t - e_{x_t}) (h_t^{(L)})^\top
+E_{\text{token}}(x_t) = E_{\text{token}}[x_t] \in \mathbb{R}^d
+$$
+
+其中 $|V|$ 是 WordPiece 词表大小（BERT 使用 30,522）。
+
+**2. 段落嵌入** $E_{\text{segment}} \in \mathbb{R}^{2 \times d}$
+
+区分句子 A 和句子 B：
+
+$$
+s_t = \begin{cases} 0 & \text{if token } t \in \text{Sentence A} \\ 1 & \text{if token } t \in \text{Sentence B} \end{cases}
 $$
 
 $$
-\boxed{\frac{\partial \mathcal{L}_t}{\partial W_{\text{MLM}}} = (p_t - e_{x_t}) (h_t^{(L)})^\top \in \mathbb{R}^{|V| \times d}}
+E_{\text{segment}}(s_t) = E_{\text{segment}}[s_t] \in \mathbb{R}^d
 $$
 
-**对隐藏向量的梯度**（用于反向传播到 Transformer 层）：
+**3. 位置嵌入** $E_{\text{position}} \in \mathbb{R}^{L_{\max} \times d}$
+
+与原始 Transformer 使用正弦函数不同，BERT 使用**可学习的位置嵌入**：
 
 $$
-\boxed{\frac{\partial \mathcal{L}_t}{\partial h_t^{(L)}} = W_{\text{MLM}}^\top (p_t - e_{x_t}) \in \mathbb{R}^d}
+E_{\text{position}}(t) = E_{\text{position}}[t] \in \mathbb{R}^d
 $$
 
-### 4.2 NSP 损失的梯度推导
+其中 $L_{\max} = 512$ 是最大序列长度。
 
-设 NSP 头的输出 logits 为：
-$$
-z_{\text{NSP}} = W_{\text{NSP}} h_{\text{[CLS]}}^{(L)} + b_{\text{NSP}} \in \mathbb{R}^2
-$$
-
-softmax 概率：
-$$
-p_{\text{NSP}} = \text{softmax}(z_{\text{NSP}}) = \begin{bmatrix} p_0 \\ p_1 \end{bmatrix}
-$$
-
-其中 $p_0 = P(\text{NotNext})$，$p_1 = P(\text{IsNext})$。
-
-**对 logits 的梯度**：
-
-$$
-\boxed{\frac{\partial \mathcal{L}_{\text{NSP}}}{\partial z_{\text{NSP}}} = p_{\text{NSP}} - e_y \in \mathbb{R}^2}
-$$
-
-**对 [CLS] 隐藏向量的梯度**：
-
-$$
-\boxed{\frac{\partial \mathcal{L}_{\text{NSP}}}{\partial h_{\text{[CLS]}}^{(L)}} = W_{\text{NSP}}^\top (p_{\text{NSP}} - e_y) \in \mathbb{R}^d}
-$$
-
-### 4.3 联合损失与多任务学习
-
-**联合梯度**：
-
-对于 Transformer 参数 $\theta$，总梯度为两个任务梯度之和：
-
-$$
-\frac{\partial \mathcal{L}_{\text{pretrain}}}{\partial \theta} = \frac{\partial \mathcal{L}_{\text{MLM}}}{\partial \theta} + \frac{\partial \mathcal{L}_{\text{NSP}}}{\partial \theta}
-$$
-
-**梯度流分析**：
-
-- MLM 梯度从被掩码位置的输出头回传到 Transformer 各层
-- NSP 梯度从 [CLS] 位置的输出头回传到 Transformer 各层
-- 两者在 Transformer 层共享参数，梯度相加
+**完整输入示例**：
 
 ```
-MLM Head: h_t^(L) → z_t → L_MLM → ∂L_MLM/∂θ
-                                         ↘
-                                          + → ∂L_pretrain/∂θ → θ_new = θ - η·∇θ
-                                         ↗
-NSP Head: h_[CLS]^(L) → z_NSP → L_NSP → ∂L_NSP/∂θ
+输入:    [CLS]  I    love  cats  [SEP]  They  are  cute  [SEP]
+Token:   101    1045 2293  8870  102    2027  2024  10140 102
+Segment: 0      0    0     0     0      1     1     1     1
+Position:0      1    2     3     4      5     6     7     8
 ```
 
-> **Q:** MLM 和 NSP 的梯度是否会冲突？
->
-> **A:** 理论上可能存在梯度方向冲突（多任务学习中的常见问题）。但实际中，MLM 提供的是 token 级别的信号，NSP 提供的是句子级别的信号，两者互补性较强。不过后续研究表明 NSP 的贡献有限，可能引入噪声。
+### 3.2 双向 Attention 掩码
 
----
-
-## 5. 训练优化方法总结
-
-### 5.1 AdamW 优化器
-
-BERT 使用 AdamW（带权重衰减的 Adam）：
+BERT 编码器使用的注意力掩码非常简单——**全 1 矩阵**（忽略 padding）：
 
 $$
-m_t = \beta_1 m_{t-1} + (1-\beta_1) g_t
-$$
-$$
-v_t = \beta_2 v_{t-1} + (1-\beta_2) g_t^2
-$$
-$$
-\hat{m}_t = \frac{m_t}{1 - \beta_1^t}, \quad \hat{v}_t = \frac{v_t}{1 - \beta_2^t}
-$$
-
-**AdamW 与 Adam + L2 的关键区别**：
-
-$$
-\boxed{\theta_{t+1} = \theta_t - \eta \left(\frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon} + \lambda \theta_t\right) \quad \text{（AdamW）}}
-$$
-
-标准 Adam + L2 正则化：
-$$
-\theta_{t+1} = \theta_t - \eta \frac{\hat{m}_t + \lambda \theta_t}{\sqrt{\hat{v}_t} + \epsilon} \quad \text{（Adam + L2，权重衰减被自适应学习率缩放）}
-$$
-
-**BERT 的超参数**：
-- $\beta_1 = 0.9$, $\beta_2 = 0.999$
-- $\epsilon = 10^{-6}$
-- $\lambda = 0.01$（权重衰减）
-
-### 5.2 学习率预热与线性衰减
-
-**学习率调度**：
-
-$$
-\text{lr}(t) = \begin{cases}
-\text{lr}_{\text{peak}} \cdot \frac{t}{t_{\text{warmup}}} & \text{if } t \leq t_{\text{warmup}} \\[6pt]
-\text{lr}_{\text{peak}} \cdot \frac{T - t}{T - t_{\text{warmup}}} & \text{if } t > t_{\text{warmup}}
+M_{ij} = \begin{cases}
+1 & \text{if position } j \text{ is not padding} \\
+0 & \text{if position } j \text{ is padding}
 \end{cases}
 $$
 
-其中 $T$ 是总训练步数，$t_{\text{warmup}}$ 是预热步数。
+**与 GPT 解码器掩码的对比**：
 
-**BERT-Base 配置**：
-- $\text{lr}_{\text{peak}} = 10^{-4}$
-- $t_{\text{warmup}} = 10{,}000$ 步
-- $T = 1{,}000{,}000$ 步
+GPT 使用下三角因果掩码：
+$$
+M^{\text{causal}}_{ij} = \begin{cases}
+1 & \text{if } j \leq i \\
+0 & \text{if } j > i
+\end{cases}
+$$
 
-### 5.3 大批量训练策略
+**可视化对比**（$n = 5$，无 padding）：
 
-**BERT 的训练配置**：
+```
+BERT 掩码（全连接）:         GPT 掩码（因果/下三角）:
+1 1 1 1 1                   1 0 0 0 0
+1 1 1 1 1                   1 1 0 0 0
+1 1 1 1 1                   1 1 1 0 0
+1 1 1 1 1                   1 1 1 1 0
+1 1 1 1 1                   1 1 1 1 1
+```
+
+注意力分数在掩码为 0 的位置被设为 $-\infty$，经 softmax 后变为 0：
+
+$$
+\text{score}_{ij} = \begin{cases}
+\frac{q_i^\top k_j}{\sqrt{d_k}} & \text{if } M_{ij} = 1 \\
+-\infty & \text{if } M_{ij} = 0
+\end{cases}
+$$
+
+### 3.3 Transformer 编码器层
+
+BERT 直接复用 Transformer 编码器结构，每层包含：
+
+**1. 多头自注意力 + 残差 + LayerNorm**：
+
+$$
+\tilde{h}^{(l)} = \text{LayerNorm}\left(h^{(l-1)} + \text{MultiHeadAttn}(h^{(l-1)}, h^{(l-1)}, h^{(l-1)})\right)
+$$
+
+**2. 前馈网络 + 残差 + LayerNorm**：
+
+$$
+h^{(l)} = \text{LayerNorm}\left(\tilde{h}^{(l)} + \text{FFN}(\tilde{h}^{(l)})\right)
+$$
+
+其中前馈网络使用 **GELU** 激活函数（不同于原始 Transformer 的 ReLU）：
+
+$$
+\text{FFN}(x) = \text{GELU}(xW_1 + b_1)W_2 + b_2
+$$
+
+**GELU 的定义**：
+
+$$
+\boxed{\text{GELU}(x) = x \cdot \Phi(x) = x \cdot \frac{1}{2}\left[1 + \text{erf}\left(\frac{x}{\sqrt{2}}\right)\right]}
+$$
+
+其中 $\Phi(x)$ 是标准正态分布的 CDF。GELU 的近似形式：
+
+$$
+\text{GELU}(x) \approx 0.5x\left(1 + \tanh\left[\sqrt{\frac{2}{\pi}}\left(x + 0.044715x^3\right)\right]\right)
+$$
+
+> **Q:** 为什么用 GELU 而不是 ReLU？
+>
+> **A:** GELU 是光滑的、处处可导的，不会像 ReLU 在 $x=0$ 处产生梯度不连续。对于预训练这样的大规模优化任务，更平滑的损失面有助于训练稳定性。
+
+### 3.4 BERT-Base 与 BERT-Large 配置
 
 | 参数 | BERT-Base | BERT-Large |
 |------|-----------|------------|
 | 层数 $L$ | 12 | 24 |
 | 隐藏维度 $d$ | 768 | 1024 |
-| 注意力头数 $h$ | 12 | 16 |
-| 参数量 | 110M | 340M |
-| Batch Size | 256 | 256 |
-| 序列长度 | 512 | 512 |
-| 训练步数 | 1M | 1M |
-| 训练语料 | BooksCorpus + English Wikipedia | 同左 |
+| 注意力头数 $A$ | 12 | 16 |
+| 每头维度 $d_k$ | 64 | 64 |
+| FFN 维度 $d_{ff}$ | 3072 | 4096 |
+| 总参数量 | 110M | 340M |
+| 最大序列长度 | 512 | 512 |
+| 词表大小 | 30,522 | 30,522 |
 
-**大批量训练的数学意义**：
+**参数量估算**（BERT-Base）：
 
-梯度估计的方差：
+嵌入层：
 $$
-\text{Var}(\hat{g}_B) = \frac{\text{Var}(g)}{B}
+P_{\text{emb}} = |V| \cdot d + L_{\max} \cdot d + 2 \cdot d = 30522 \times 768 + 512 \times 768 + 2 \times 768 \approx 23.8\text{M}
 $$
 
-Batch Size $B$ 越大，梯度估计越稳定，可以使用更大的学习率。
+单层 Transformer：
+$$
+P_{\text{layer}} = \underbrace{4 \cdot d^2}_{\text{MultiHead}} + \underbrace{2 \cdot d \cdot d_{ff}}_{\text{FFN}} + \underbrace{4d + 2d_{ff}}_{\text{biases}} \approx 7.1\text{M}
+$$
+
+总计：
+$$
+P_{\text{total}} = P_{\text{emb}} + L \cdot P_{\text{layer}} + P_{\text{heads}} \approx 23.8\text{M} + 12 \times 7.1\text{M} + 1.5\text{M} \approx 110\text{M}
+$$
+
+---
+
+## 4. 预训练目标的数学推导
+
+### 4.1 MLM 损失函数
+
+**符号定义**：
+
+- $x = (x_1, x_2, \ldots, x_n)$：原始输入序列
+- $\tilde{x}$：经掩码处理后的输入序列
+- $\mathcal{M} \subseteq \{1, 2, \ldots, n\}$：被掩码位置的集合，$|\mathcal{M}| \approx 0.15n$
+- $h_t \in \mathbb{R}^d$：位置 $t$ 的最终隐藏状态
+- $W_{\text{MLM}} \in \mathbb{R}^{|V| \times d}$：MLM 输出投影矩阵
+
+**前向计算**：
+
+1. 获取隐藏状态：$H = \text{BERT}(\tilde{x}) \in \mathbb{R}^{n \times d}$
+2. 对掩码位置预测 token：
+
+$$
+\text{logits}_t = W_{\text{MLM}} \cdot h_t + b_{\text{MLM}} \in \mathbb{R}^{|V|}, \quad t \in \mathcal{M}
+$$
+
+3. Softmax 得到概率分布：
+
+$$
+P(x_t = w \mid \tilde{x}) = \frac{\exp(\text{logits}_{t,w})}{\sum_{w'=1}^{|V|} \exp(\text{logits}_{t,w'})}, \quad w \in \{1, \ldots, |V|\}
+$$
+
+**MLM 损失**（交叉熵）：
+
+$$
+\boxed{\mathcal{L}_{\text{MLM}} = -\frac{1}{|\mathcal{M}|} \sum_{t \in \mathcal{M}} \log P(x_t \mid \tilde{x})}
+$$
+
+**梯度分析**：
+
+对于 MLM 输出层权重 $W_{\text{MLM}}$：
+
+$$
+\frac{\partial \mathcal{L}_{\text{MLM}}}{\partial W_{\text{MLM}}} = -\frac{1}{|\mathcal{M}|} \sum_{t \in \mathcal{M}} \left(\mathbb{1}_{x_t} - P(\cdot \mid \tilde{x})\right) h_t^\top
+$$
+
+其中 $\mathbb{1}_{x_t} \in \mathbb{R}^{|V|}$ 是真实 token 的 one-hot 向量。
+
+> **直觉**：梯度的方向使得正确 token 的概率增大（$\mathbb{1}_{x_t}$ 项），其他 token 的概率减小（$-P(\cdot \mid \tilde{x})$ 项）。
+
+### 4.2 NSP 损失函数
+
+**符号定义**：
+
+- $h_{\texttt{[CLS]}} \in \mathbb{R}^d$：`[CLS]` 位置的最终隐藏状态
+- $W_{\text{NSP}} \in \mathbb{R}^{2 \times d}$：NSP 分类矩阵
+- $y \in \{0, 1\}$：真实标签（0 = IsNext，1 = NotNext）
+
+**前向计算**：
+
+$$
+\text{logits}_{\text{NSP}} = W_{\text{NSP}} \cdot h_{\texttt{[CLS]}} + b_{\text{NSP}} \in \mathbb{R}^2
+$$
+
+$$
+P(\text{class} \mid A, B) = \text{softmax}(\text{logits}_{\text{NSP}}) \in \mathbb{R}^2
+$$
+
+**NSP 损失**（二分类交叉熵）：
+
+$$
+\boxed{\mathcal{L}_{\text{NSP}} = -\log P(y \mid A, B)}
+$$
+
+展开为：
+
+$$
+\mathcal{L}_{\text{NSP}} = -\left[y \log P(\text{IsNext} \mid A, B) + (1 - y) \log P(\text{NotNext} \mid A, B)\right]
+$$
+
+### 4.3 联合损失与梯度分析
+
+BERT 的总预训练损失为两个目标的简单相加：
+
+$$
+\boxed{\mathcal{L}_{\text{BERT}} = \mathcal{L}_{\text{MLM}} + \mathcal{L}_{\text{NSP}}}
+$$
+
+**梯度流分析**：
+
+对于 Transformer 编码器参数 $\theta$：
+
+$$
+\frac{\partial \mathcal{L}_{\text{BERT}}}{\partial \theta} = \frac{\partial \mathcal{L}_{\text{MLM}}}{\partial \theta} + \frac{\partial \mathcal{L}_{\text{NSP}}}{\partial \theta}
+$$
+
+**关键观察**：
+
+1. **MLM 梯度**：来自 $|\mathcal{M}|$ 个掩码位置，信号分布在整个序列上
+2. **NSP 梯度**：仅来自 `[CLS]` 一个位置，但通过注意力机制影响所有参数
+3. MLM 提供**token 级别**的监督信号，NSP 提供**句子级别**的监督信号
+
+**两个损失的量级对比**：
+
+$$
+\mathcal{L}_{\text{MLM}} \approx -\frac{1}{|\mathcal{M}|} \sum_{t \in \mathcal{M}} \log \frac{1}{|V|} \approx \log |V| \approx 10.3 \quad (\text{初始化时})
+$$
+
+$$
+\mathcal{L}_{\text{NSP}} \approx -\log \frac{1}{2} = \log 2 \approx 0.69 \quad (\text{初始化时})
+$$
+
+> **注意**：MLM 损失在数值上远大于 NSP 损失，这意味着 MLM 在训练初期主导梯度更新方向。
+
+---
+
+## 5. 训练优化方法总结
+
+### 5.1 预训练策略
+
+**数据规模**：
+
+| 数据集 | 大小 | 说明 |
+|--------|------|------|
+| BooksCorpus | 800M 词 | 未出版书籍 |
+| English Wikipedia | 2,500M 词 | 仅文本，去除表格和列表 |
+| **合计** | ~3.3B 词 | 约 16GB 文本 |
+
+**两阶段预训练**：
+
+| 阶段 | 序列长度 | 批大小 | 步数 | 说明 |
+|------|---------|--------|------|------|
+| 阶段 1 | 128 | 256 | 900K | 90% 的训练步，短序列加速 |
+| 阶段 2 | 512 | 256 | 100K | 10% 的训练步，学习长距离依赖 |
+
+**总计算量**：
+
+$$
+\text{FLOPs} \approx 6 \times P \times D \approx 6 \times 110\text{M} \times 137\text{B} \approx 9 \times 10^{19}
+$$
+
+其中 $P$ 是参数量，$D$ 是总 token 数（序列长度 × 批大小 × 步数）。
+
+### 5.2 微调策略
+
+BERT 微调的核心思想：**在预训练模型顶部添加一个简单的任务特定层**。
+
+**分类任务**（如情感分析、NLI）：
+
+$$
+P(y \mid x) = \text{softmax}(W_{\text{cls}} \cdot h_{\texttt{[CLS]}} + b_{\text{cls}})
+$$
+
+**序列标注任务**（如 NER）：
+
+$$
+P(y_t \mid x) = \text{softmax}(W_{\text{tag}} \cdot h_t + b_{\text{tag}}), \quad t = 1, \ldots, n
+$$
+
+**问答任务**（如 SQuAD）：
+
+预测答案的起始和结束位置：
+
+$$
+P_{\text{start}}(t) = \frac{\exp(W_s \cdot h_t)}{\sum_{j=1}^n \exp(W_s \cdot h_j)}
+$$
+
+$$
+P_{\text{end}}(t) = \frac{\exp(W_e \cdot h_t)}{\sum_{j=1}^n \exp(W_e \cdot h_j)}
+$$
+
+$$
+\text{score}(i, j) = P_{\text{start}}(i) \cdot P_{\text{end}}(j), \quad i \leq j
+$$
+
+### 5.3 优化器与学习率调度
+
+**Adam with Weight Decay (AdamW)**：
+
+$$
+\theta_{t+1} = \theta_t - \eta \left(\frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon} + \lambda \theta_t\right)
+$$
+
+其中 $\lambda$ 是权重衰减系数（BERT 使用 $\lambda = 0.01$）。
+
+**学习率调度**（线性预热 + 线性衰减）：
+
+$$
+\eta(t) = \begin{cases}
+\eta_{\max} \cdot \frac{t}{t_{\text{warmup}}} & \text{if } t < t_{\text{warmup}} \\
+\eta_{\max} \cdot \frac{T - t}{T - t_{\text{warmup}}} & \text{if } t \geq t_{\text{warmup}}
+\end{cases}
+$$
+
+**超参数设置**：
+
+| 超参数 | 预训练 | 微调 |
+|--------|--------|------|
+| 学习率 $\eta$ | $1 \times 10^{-4}$ | $2 \times 10^{-5}$ |
+| Batch Size | 256 | 16/32 |
+| Epochs | — | 3-4 |
+| Warmup | 10K steps | 10% |
+| Weight Decay | 0.01 | 0.01 |
+| Adam $\beta_1$ | 0.9 | 0.9 |
+| Adam $\beta_2$ | 0.999 | 0.999 |
+| Dropout | 0.1 | 0.1 |
 
 ---
 
@@ -593,171 +625,214 @@ import numpy as np
 
 def softmax(x, axis=-1):
     """
-    数值稳定的 softmax
+    数值稳定的 Softmax
     
     数学公式:
-        softmax(x_i) = exp(x_i - max(x)) / Σ exp(x_j - max(x))
+        softmax(x_i) = exp(x_i - max(x)) / sum(exp(x_j - max(x)))
     """
     x_max = np.max(x, axis=axis, keepdims=True)
     exp_x = np.exp(x - x_max)
     return exp_x / np.sum(exp_x, axis=axis, keepdims=True)
 
+
 def gelu(x):
     """
-    GELU 激活函数 (BERT 使用 GELU 而非 ReLU)
+    GELU 激活函数
     
     数学公式:
-        GELU(x) = x · Φ(x) ≈ 0.5x(1 + tanh[√(2/π)(x + 0.044715x³)])
-    
-    其中 Φ(x) 是标准正态分布的 CDF
+        GELU(x) = x * Φ(x) ≈ 0.5x(1 + tanh[√(2/π)(x + 0.044715x³)])
     """
-    return 0.5 * x * (1 + np.tanh(np.sqrt(2 / np.pi) * (x + 0.044715 * x ** 3)))
+    return 0.5 * x * (1.0 + np.tanh(
+        np.sqrt(2.0 / np.pi) * (x + 0.044715 * np.power(x, 3))
+    ))
+
 
 def layer_norm(x, gamma, beta, eps=1e-12):
     """
     层归一化
     
     数学公式:
-        LayerNorm(x) = γ · (x - μ) / √(σ² + ε) + β
+        LayerNorm(x) = γ * (x - μ) / √(σ² + ε) + β
     
     参数:
-        x: 输入 (batch, seq_len, d)
-        gamma: 缩放参数 (d,)
-        beta: 偏移参数 (d,)
+        x: 输入，形状 (batch, seq_len, d_model)
+        gamma: 缩放参数，形状 (d_model,)
+        beta: 偏移参数，形状 (d_model,)
     """
-    mean = np.mean(x, axis=-1, keepdims=True)  # (batch, seq_len, 1)
-    var = np.var(x, axis=-1, keepdims=True)     # (batch, seq_len, 1)
-    x_norm = (x - mean) / np.sqrt(var + eps)
+    mean = np.mean(x, axis=-1, keepdims=True)       # (batch, seq_len, 1)
+    var = np.var(x, axis=-1, keepdims=True)          # (batch, seq_len, 1)
+    x_norm = (x - mean) / np.sqrt(var + eps)         # (batch, seq_len, d_model)
     return gamma * x_norm + beta
 
-def scaled_dot_product_attention(Q, K, V, mask=None):
+
+def scaled_dot_product_attention_numpy(Q, K, V, mask=None):
     """
-    缩放点积注意力（双向，无因果掩码）
+    缩放点积注意力 (NumPy)
     
     数学公式:
-        Attention(Q, K, V) = softmax(QK^T / √d_k + M) V
+        Attention(Q, K, V) = softmax(QK^T / √d_k) V
     
     参数:
-        Q: 查询矩阵 (batch, heads, seq_len, d_k)
-        K: 键矩阵   (batch, heads, seq_len, d_k)
-        V: 值矩阵   (batch, heads, seq_len, d_v)
-        mask: padding 掩码 (batch, 1, 1, seq_len)
-              1 = 有效位置, 0 = padding
+        Q: 查询矩阵，形状 (batch, heads, seq_len, d_k)
+        K: 键矩阵，形状 (batch, heads, seq_len, d_k)
+        V: 值矩阵，形状 (batch, heads, seq_len, d_v)
+        mask: 注意力掩码，形状 (batch, 1, 1, seq_len)
     
     返回:
-        output: (batch, heads, seq_len, d_v)
-        weights: (batch, heads, seq_len, seq_len)
+        output: 注意力输出，形状 (batch, heads, seq_len, d_v)
+        weights: 注意力权重，形状 (batch, heads, seq_len, seq_len)
     """
     d_k = Q.shape[-1]
     
-    # 步骤1: QK^T / √d_k
+    # 1. 计算注意力分数：QK^T / √d_k
     scores = np.matmul(Q, K.transpose(0, 1, 3, 2)) / np.sqrt(d_k)
     # scores: (batch, heads, seq_len, seq_len)
     
-    # 步骤2: 应用 padding 掩码（BERT 不需要因果掩码）
+    # 2. 应用掩码（BERT 中仅处理 padding）
     if mask is not None:
-        scores = np.where(mask == 1, scores, -1e9)
+        scores = np.where(mask == 0, -1e9, scores)
     
-    # 步骤3: softmax 归一化
+    # 3. Softmax 归一化
     weights = softmax(scores, axis=-1)
     # weights: (batch, heads, seq_len, seq_len)
     
-    # 步骤4: 加权求和
+    # 4. 加权求和
     output = np.matmul(weights, V)
     # output: (batch, heads, seq_len, d_v)
     
     return output, weights
 
-def mlm_loss_numpy(logits, labels, mask_positions):
-    """
-    MLM 交叉熵损失（NumPy 实现）
-    
-    数学公式:
-        L_MLM = -1/|M| Σ_{t∈M} log P(x_t | x̃)
-    
-    参数:
-        logits: 模型输出 (batch, seq_len, vocab_size)
-        labels: 原始 token ID (batch, seq_len)
-        mask_positions: 布尔掩码 (batch, seq_len)
-                        True = 被掩码的位置
-    
-    返回:
-        loss: 标量损失值
-    """
-    # 仅计算被掩码位置的损失
-    batch_size, seq_len, vocab_size = logits.shape
-    
-    total_loss = 0.0
-    count = 0
-    
-    for b in range(batch_size):
-        for t in range(seq_len):
-            if mask_positions[b, t]:
-                # softmax 概率
-                probs = softmax(logits[b, t])
-                # 交叉熵损失
-                total_loss -= np.log(probs[labels[b, t]] + 1e-10)
-                count += 1
-    
-    return total_loss / max(count, 1)
 
-def nsp_loss_numpy(cls_logits, labels):
+def bert_embedding_numpy(token_ids, segment_ids, position_ids,
+                         token_emb, segment_emb, position_emb,
+                         ln_gamma, ln_beta):
     """
-    NSP 二分类交叉熵损失（NumPy 实现）
+    BERT 输入嵌入 (NumPy)
     
     数学公式:
-        L_NSP = -[y log P(IsNext) + (1-y) log(1 - P(IsNext))]
+        E(t) = E_token(x_t) + E_segment(s_t) + E_position(t)
+        output = LayerNorm(E(t))
     
     参数:
-        cls_logits: [CLS] 位置的 logits (batch, 2)
-        labels: NSP 标签 (batch,)  0=NotNext, 1=IsNext
-    
-    返回:
-        loss: 标量损失值
+        token_ids: token 索引，形状 (batch, seq_len)
+        segment_ids: 段落索引，形状 (batch, seq_len)
+        position_ids: 位置索引，形状 (batch, seq_len)
+        token_emb: token 嵌入矩阵，形状 (vocab_size, d_model)
+        segment_emb: 段落嵌入矩阵，形状 (2, d_model)
+        position_emb: 位置嵌入矩阵，形状 (max_len, d_model)
+        ln_gamma, ln_beta: LayerNorm 参数
     """
-    probs = softmax(cls_logits, axis=-1)  # (batch, 2)
-    batch_size = cls_logits.shape[0]
+    # 查表获取嵌入向量
+    tok_emb = token_emb[token_ids]       # (batch, seq_len, d_model)
+    seg_emb = segment_emb[segment_ids]   # (batch, seq_len, d_model)
+    pos_emb = position_emb[position_ids] # (batch, seq_len, d_model)
     
+    # 三种嵌入相加
+    embeddings = tok_emb + seg_emb + pos_emb  # (batch, seq_len, d_model)
+    
+    # LayerNorm
+    embeddings = layer_norm(embeddings, ln_gamma, ln_beta)
+    
+    return embeddings
+
+
+def mlm_loss_numpy(hidden_states, masked_positions, true_labels,
+                   mlm_weight, mlm_bias):
+    """
+    MLM 损失计算 (NumPy)
+    
+    数学公式:
+        L_MLM = -1/|M| * Σ_{t∈M} log P(x_t | x̃)
+    
+    参数:
+        hidden_states: BERT 输出，形状 (batch, seq_len, d_model)
+        masked_positions: 掩码位置索引列表
+        true_labels: 真实 token ID 列表
+        mlm_weight: 输出投影矩阵，形状 (vocab_size, d_model)
+        mlm_bias: 输出偏置，形状 (vocab_size,)
+    """
     total_loss = 0.0
-    for b in range(batch_size):
-        total_loss -= np.log(probs[b, labels[b]] + 1e-10)
+    num_masked = len(masked_positions)
     
-    return total_loss / batch_size
+    for i, (batch_idx, pos) in enumerate(masked_positions):
+        # 取出掩码位置的隐藏状态
+        h = hidden_states[batch_idx, pos]  # (d_model,)
+        
+        # 计算 logits
+        logits = np.dot(mlm_weight, h) + mlm_bias  # (vocab_size,)
+        
+        # Softmax 概率
+        probs = softmax(logits)  # (vocab_size,)
+        
+        # 交叉熵损失
+        true_id = true_labels[i]
+        total_loss -= np.log(probs[true_id] + 1e-10)
+    
+    return total_loss / max(num_masked, 1)
+
+
+def nsp_loss_numpy(cls_hidden, nsp_weight, nsp_bias, true_label):
+    """
+    NSP 损失计算 (NumPy)
+    
+    数学公式:
+        L_NSP = -log P(y | A, B)
+        P(y | A, B) = softmax(W_NSP * h_[CLS] + b_NSP)
+    
+    参数:
+        cls_hidden: [CLS] 位置的隐藏状态，形状 (d_model,)
+        nsp_weight: NSP 分类权重，形状 (2, d_model)
+        nsp_bias: NSP 分类偏置，形状 (2,)
+        true_label: 真实标签 (0 或 1)
+    """
+    logits = np.dot(nsp_weight, cls_hidden) + nsp_bias  # (2,)
+    probs = softmax(logits)  # (2,)
+    loss = -np.log(probs[true_label] + 1e-10)
+    return loss
+
 
 # ========== 测试 NumPy 实现 ==========
-
-def test_numpy_components():
-    """测试 NumPy 实现的正确性"""
-    np.random.seed(42)
-    batch_size, seq_len, d_k, num_heads, vocab_size = 2, 8, 16, 4, 100
-    
-    # 测试 GELU
-    x = np.array([-2, -1, 0, 1, 2], dtype=np.float64)
-    print(f"GELU: {gelu(x)}")  # GELU(0)≈0, GELU(1)≈0.841
-    
-    # 测试 Attention（双向，无因果掩码，仅 padding 掩码）
-    Q = np.random.randn(batch_size, num_heads, seq_len, d_k)
-    K = np.random.randn(batch_size, num_heads, seq_len, d_k)
-    V = np.random.randn(batch_size, num_heads, seq_len, d_k)
-    mask = np.ones((batch_size, 1, 1, seq_len))
-    mask[:, :, :, -2:] = 0  # 最后2位是 padding
-    
-    output, weights = scaled_dot_product_attention(Q, K, V, mask)
-    print(f"Attention weights sum: {weights[0,0,0].sum():.4f}")  # 应为 1.0
-    print(f"Attention to padding: {weights[0,0,0,-2:]}")  # 应接近 0
-    
-    # 测试 MLM/NSP Loss
-    logits = np.random.randn(batch_size, seq_len, vocab_size)
-    labels = np.random.randint(0, vocab_size, (batch_size, seq_len))
-    mask_pos = np.zeros((batch_size, seq_len), dtype=bool)
-    mask_pos[0, 2] = True; mask_pos[1, 5] = True
-    print(f"MLM Loss: {mlm_loss_numpy(logits, labels, mask_pos):.4f} (baseline ~{np.log(vocab_size):.2f})")
-    
-    cls_logits = np.random.randn(batch_size, 2)
-    print(f"NSP Loss: {nsp_loss_numpy(cls_logits, np.array([1,0])):.4f} (baseline ~{np.log(2):.2f})")
-
 if __name__ == "__main__":
-    test_numpy_components()
+    np.random.seed(42)
+    batch_size, seq_len, d_model, vocab_size = 2, 8, 64, 100
+    
+    # 初始化参数
+    token_emb = np.random.randn(vocab_size, d_model) * 0.02
+    segment_emb = np.random.randn(2, d_model) * 0.02
+    position_emb = np.random.randn(512, d_model) * 0.02
+    ln_gamma, ln_beta = np.ones(d_model), np.zeros(d_model)
+    
+    # 创建输入并计算嵌入
+    token_ids = np.random.randint(0, vocab_size, (batch_size, seq_len))
+    segment_ids = np.array([[0,0,0,0,0,1,1,1], [0,0,0,1,1,1,1,1]])
+    position_ids = np.tile(np.arange(seq_len), (batch_size, 1))
+    
+    embeddings = bert_embedding_numpy(
+        token_ids, segment_ids, position_ids,
+        token_emb, segment_emb, position_emb, ln_gamma, ln_beta
+    )
+    print(f"嵌入输出形状: {embeddings.shape}")  # (2, 8, 64)
+    
+    # 测试注意力
+    Q = K = V = embeddings[:, np.newaxis, :, :]
+    attn_out, attn_weights = scaled_dot_product_attention_numpy(Q, K, V)
+    print(f"注意力权重行和: {attn_weights[0, 0, 0].sum():.4f}")  # 1.0
+    
+    # 测试 MLM 损失（初始化时约 log(100) ≈ 4.6）
+    mlm_weight = np.random.randn(vocab_size, d_model) * 0.02
+    mlm_loss = mlm_loss_numpy(
+        embeddings, [(0, 2), (0, 5), (1, 3)], [42, 17, 88],
+        mlm_weight, np.zeros(vocab_size)
+    )
+    print(f"MLM 损失: {mlm_loss:.4f}")
+    
+    # 测试 NSP 损失（初始化时约 log(2) ≈ 0.69）
+    nsp_loss = nsp_loss_numpy(
+        embeddings[0, 0], np.random.randn(2, d_model) * 0.02,
+        np.zeros(2), true_label=0
+    )
+    print(f"NSP 损失: {nsp_loss:.4f}")
+    print(f"GELU([-2,-1,0,1,2]) = {gelu(np.array([-2.,-1.,0.,1.,2.]))}")
 ```
 
 ### 6.2 PyTorch 完整实现
@@ -766,19 +841,17 @@ if __name__ == "__main__":
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, Tuple
 import math
+from typing import Optional, Tuple
 
-# =============================================
-# 6.2.1 BERT 嵌入层
-# =============================================
 
 class BERTEmbedding(nn.Module):
     """
-    BERT 输入嵌入 = Token Embedding + Segment Embedding + Position Embedding
+    BERT 输入嵌入层
     
     数学公式:
-        E_input = E_token(x) + E_segment(s) + E_position(t)
+        E(t) = E_token(x_t) + E_segment(s_t) + E_position(t)
+        output = LayerNorm(Dropout(E(t)))
     
     参数:
         vocab_size: 词表大小 |V|
@@ -786,170 +859,274 @@ class BERTEmbedding(nn.Module):
         max_len: 最大序列长度
         dropout: dropout 概率
     """
-    def __init__(
-        self,
-        vocab_size: int,
-        d_model: int = 768,
-        max_len: int = 512,
-        dropout: float = 0.1
-    ):
+    def __init__(self, vocab_size: int, d_model: int, max_len: int = 512,
+                 dropout: float = 0.1):
         super().__init__()
-        # 三重嵌入
         self.token_embedding = nn.Embedding(vocab_size, d_model)
-        self.segment_embedding = nn.Embedding(2, d_model)  # 只有 0 和 1 两个 segment
-        self.position_embedding = nn.Embedding(max_len, d_model)  # 可学习位置编码
-        
-        # LayerNorm + Dropout
+        self.segment_embedding = nn.Embedding(2, d_model)
+        self.position_embedding = nn.Embedding(max_len, d_model)
         self.layer_norm = nn.LayerNorm(d_model, eps=1e-12)
         self.dropout = nn.Dropout(dropout)
     
-    def forward(
-        self,
-        input_ids: torch.Tensor,       # (batch, seq_len)
-        segment_ids: torch.Tensor,      # (batch, seq_len)
-        position_ids: Optional[torch.Tensor] = None  # (batch, seq_len)
-    ) -> torch.Tensor:
-        seq_len = input_ids.size(1)
+    def forward(self, token_ids: torch.Tensor,
+                segment_ids: torch.Tensor) -> torch.Tensor:
+        """
+        参数:
+            token_ids: (batch, seq_len) token 索引
+            segment_ids: (batch, seq_len) 段落索引 (0 或 1)
+        返回:
+            embeddings: (batch, seq_len, d_model) 输入嵌入
+        """
+        seq_len = token_ids.size(1)
+        # 自动生成位置索引: [0, 1, 2, ..., seq_len-1]
+        position_ids = torch.arange(seq_len, device=token_ids.device)
+        position_ids = position_ids.unsqueeze(0).expand_as(token_ids)
         
-        # 自动生成位置 ID
-        if position_ids is None:
-            position_ids = torch.arange(seq_len, device=input_ids.device)
-            position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
+        # 三种嵌入相加
+        embeddings = (
+            self.token_embedding(token_ids) +
+            self.segment_embedding(segment_ids) +
+            self.position_embedding(position_ids)
+        )
         
-        # 三重嵌入相加
-        token_emb = self.token_embedding(input_ids)      # (batch, seq_len, d)
-        segment_emb = self.segment_embedding(segment_ids) # (batch, seq_len, d)
-        position_emb = self.position_embedding(position_ids) # (batch, seq_len, d)
-        
-        embeddings = token_emb + segment_emb + position_emb
+        # LayerNorm + Dropout
         embeddings = self.layer_norm(embeddings)
         embeddings = self.dropout(embeddings)
         
-        return embeddings  # (batch, seq_len, d)
+        return embeddings
 
-# =============================================
-# 6.2.2 多头自注意力（双向）
-# =============================================
 
-class BERTSelfAttention(nn.Module):
+class MultiHeadSelfAttention(nn.Module):
     """
-    BERT 双向多头自注意力（不使用因果掩码，仅 padding 掩码）
+    多头自注意力 (BERT 版本)
     
     数学公式:
-        Attention(Q, K, V) = softmax(QK^T / √d_k + M_pad) V
+        MultiHead(Q, K, V) = Concat(head_1, ..., head_h) W^O
+        head_i = Attention(QW_i^Q, KW_i^K, VW_i^V)
+        Attention(Q, K, V) = softmax(QK^T / √d_k) V
+    
+    参数:
+        d_model: 模型维度
+        num_heads: 注意力头数
+        dropout: dropout 概率
     """
-    def __init__(self, d_model: int = 768, num_heads: int = 12, dropout: float = 0.1):
+    def __init__(self, d_model: int, num_heads: int, dropout: float = 0.1):
         super().__init__()
-        assert d_model % num_heads == 0, "d_model 必须能被 num_heads 整除"
+        assert d_model % num_heads == 0
         
         self.d_model = d_model
         self.num_heads = num_heads
-        self.d_k = d_model // num_heads  # 每个头的维度
+        self.d_k = d_model // num_heads
         
-        # Q, K, V 投影矩阵
         self.W_Q = nn.Linear(d_model, d_model)
         self.W_K = nn.Linear(d_model, d_model)
         self.W_V = nn.Linear(d_model, d_model)
-        
-        # 输出投影
         self.W_O = nn.Linear(d_model, d_model)
+        
         self.dropout = nn.Dropout(dropout)
     
-    def forward(
-        self,
-        hidden_states: torch.Tensor,    # (batch, seq_len, d_model)
-        attention_mask: Optional[torch.Tensor] = None  # (batch, 1, 1, seq_len)
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        batch_size, seq_len, _ = hidden_states.shape
+    def forward(self, x: torch.Tensor,
+                mask: Optional[torch.Tensor] = None
+               ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        参数:
+            x: (batch, seq_len, d_model) 输入
+            mask: (batch, 1, 1, seq_len) 注意力掩码
+        返回:
+            output: (batch, seq_len, d_model) 注意力输出
+            weights: (batch, heads, seq_len, seq_len) 注意力权重
+        """
+        batch_size, seq_len, _ = x.size()
         
-        # 线性投影
-        Q = self.W_Q(hidden_states)  # (batch, seq_len, d_model)
-        K = self.W_K(hidden_states)
-        V = self.W_V(hidden_states)
+        # 线性投影 + 分割多头
+        Q = self.W_Q(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        K = self.W_K(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        V = self.W_V(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        # Q, K, V: (batch, heads, seq_len, d_k)
         
-        # 分割多头: (batch, seq_len, d_model) → (batch, num_heads, seq_len, d_k)
-        Q = Q.view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
-        K = K.view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
-        V = V.view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
-        
-        # 缩放点积注意力: QK^T / √d_k
+        # 缩放点积注意力
         scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.d_k)
-        # scores: (batch, num_heads, seq_len, seq_len)
+        # scores: (batch, heads, seq_len, seq_len)
         
-        # 应用 padding 掩码（BERT 的关键：无因果掩码）
-        if attention_mask is not None:
-            scores = scores + attention_mask  # mask 中 padding 位置为 -1e9
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, -1e9)
         
-        # Softmax 归一化
-        attention_weights = F.softmax(scores, dim=-1)
-        attention_weights = self.dropout(attention_weights)
+        weights = F.softmax(scores, dim=-1)
+        weights = self.dropout(weights)
         
         # 加权求和
-        context = torch.matmul(attention_weights, V)
-        # context: (batch, num_heads, seq_len, d_k)
+        context = torch.matmul(weights, V)
+        # context: (batch, heads, seq_len, d_k)
         
         # 拼接多头
-        context = context.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
+        context = context.transpose(1, 2).contiguous().view(
+            batch_size, seq_len, self.d_model
+        )
         
         # 输出投影
         output = self.W_O(context)
         
-        return output, attention_weights
+        return output, weights
 
-# =============================================
-# 6.2.3 BERT Transformer Block
-# =============================================
 
-class BERTBlock(nn.Module):
+class PositionwiseFeedForward(nn.Module):
     """
-    BERT Transformer Block (Post-LN): Self-Attention → Add&Norm → FFN(GELU) → Add&Norm
+    位置前馈网络 (BERT 版本，使用 GELU)
+    
+    数学公式:
+        FFN(x) = GELU(xW_1 + b_1)W_2 + b_2
+    
+    参数:
+        d_model: 输入/输出维度
+        d_ff: 隐藏层维度 (通常为 4 * d_model)
+        dropout: dropout 概率
     """
-    def __init__(
-        self,
-        d_model: int = 768,
-        num_heads: int = 12,
-        d_ff: int = 3072,
-        dropout: float = 0.1
-    ):
+    def __init__(self, d_model: int, d_ff: int, dropout: float = 0.1):
         super().__init__()
-        # 自注意力
-        self.self_attention = BERTSelfAttention(d_model, num_heads, dropout)
-        self.norm1 = nn.LayerNorm(d_model, eps=1e-12)
-        
-        # 前馈网络（GELU 激活）
-        self.ffn = nn.Sequential(
-            nn.Linear(d_model, d_ff),
-            nn.GELU(),
-            nn.Dropout(dropout),
-            nn.Linear(d_ff, d_model),
-            nn.Dropout(dropout)
-        )
-        self.norm2 = nn.LayerNorm(d_model, eps=1e-12)
-        
+        self.linear1 = nn.Linear(d_model, d_ff)
+        self.linear2 = nn.Linear(d_ff, d_model)
         self.dropout = nn.Dropout(dropout)
     
-    def forward(
-        self,
-        hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: (batch, seq_len, d_model)
+        x = self.linear1(x)       # (batch, seq_len, d_ff)
+        x = F.gelu(x)             # GELU 激活
+        x = self.dropout(x)
+        x = self.linear2(x)       # (batch, seq_len, d_model)
+        return x
+
+
+class BERTEncoderLayer(nn.Module):
+    """
+    BERT 编码器层
+    
+    结构:
+        x → [Self-Attention] → [Add & Norm] → [FFN] → [Add & Norm] → output
+    
+    数学公式:
+        h̃ = LayerNorm(x + MultiHeadAttn(x))
+        h  = LayerNorm(h̃ + FFN(h̃))
+    """
+    def __init__(self, d_model: int, num_heads: int, d_ff: int,
+                 dropout: float = 0.1):
+        super().__init__()
+        self.attention = MultiHeadSelfAttention(d_model, num_heads, dropout)
+        self.feed_forward = PositionwiseFeedForward(d_model, d_ff, dropout)
+        self.norm1 = nn.LayerNorm(d_model, eps=1e-12)
+        self.norm2 = nn.LayerNorm(d_model, eps=1e-12)
+        self.dropout1 = nn.Dropout(dropout)
+        self.dropout2 = nn.Dropout(dropout)
+    
+    def forward(self, x: torch.Tensor,
+                mask: Optional[torch.Tensor] = None
+               ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        参数:
+            x: (batch, seq_len, d_model) 输入
+            mask: (batch, 1, 1, seq_len) 注意力掩码
+        返回:
+            output: (batch, seq_len, d_model)
+            attn_weights: (batch, heads, seq_len, seq_len)
+        """
         # 1. 自注意力 + 残差 + LayerNorm
-        attn_output, attn_weights = self.self_attention(hidden_states, attention_mask)
-        hidden_states = self.norm1(hidden_states + self.dropout(attn_output))
+        attn_output, attn_weights = self.attention(x, mask)
+        x = self.norm1(x + self.dropout1(attn_output))
         
         # 2. FFN + 残差 + LayerNorm
-        ffn_output = self.ffn(hidden_states)
-        hidden_states = self.norm2(hidden_states + ffn_output)
+        ff_output = self.feed_forward(x)
+        x = self.norm2(x + self.dropout2(ff_output))
         
-        return hidden_states, attn_weights
+        return x, attn_weights
 
-# =============================================
-# 6.2.4 BERT 主模型
-# =============================================
+
+class BERTEncoder(nn.Module):
+    """
+    BERT 编码器 (多层堆叠)
+    """
+    def __init__(self, d_model: int, num_heads: int, d_ff: int,
+                 num_layers: int, dropout: float = 0.1):
+        super().__init__()
+        self.layers = nn.ModuleList([
+            BERTEncoderLayer(d_model, num_heads, d_ff, dropout)
+            for _ in range(num_layers)
+        ])
+    
+    def forward(self, x: torch.Tensor,
+                mask: Optional[torch.Tensor] = None
+               ) -> Tuple[torch.Tensor, list]:
+        """
+        参数:
+            x: (batch, seq_len, d_model) 输入嵌入
+            mask: (batch, 1, 1, seq_len) 注意力掩码
+        返回:
+            output: (batch, seq_len, d_model) 最终隐藏状态
+            all_attn_weights: 各层注意力权重列表
+        """
+        all_attn_weights = []
+        for layer in self.layers:
+            x, attn_weights = layer(x, mask)
+            all_attn_weights.append(attn_weights)
+        return x, all_attn_weights
+
+
+class MLMHead(nn.Module):
+    """
+    Masked Language Model 预测头
+    
+    数学公式:
+        logits = W_MLM * GELU(W_dense * h + b_dense) + b_MLM
+    
+    注意: BERT 的 MLM 头包含一个额外的 Dense + GELU + LayerNorm 层
+    """
+    def __init__(self, d_model: int, vocab_size: int):
+        super().__init__()
+        self.dense = nn.Linear(d_model, d_model)
+        self.layer_norm = nn.LayerNorm(d_model, eps=1e-12)
+        self.decoder = nn.Linear(d_model, vocab_size)
+        # 注意：原始 BERT 共享 token embedding 权重
+        # self.decoder.weight = embedding.token_embedding.weight
+    
+    def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        """
+        参数:
+            hidden_states: (batch, seq_len, d_model) 或 (num_masked, d_model)
+        返回:
+            logits: (..., vocab_size) 预测 logits
+        """
+        x = self.dense(hidden_states)
+        x = F.gelu(x)
+        x = self.layer_norm(x)
+        logits = self.decoder(x)
+        return logits
+
+
+class NSPHead(nn.Module):
+    """
+    Next Sentence Prediction 预测头
+    
+    数学公式:
+        logits = W_NSP * h_[CLS] + b_NSP
+    """
+    def __init__(self, d_model: int):
+        super().__init__()
+        self.classifier = nn.Linear(d_model, 2)
+    
+    def forward(self, cls_hidden: torch.Tensor) -> torch.Tensor:
+        """
+        参数:
+            cls_hidden: (batch, d_model) [CLS] 位置的隐藏状态
+        返回:
+            logits: (batch, 2) NSP 预测 logits
+        """
+        return self.classifier(cls_hidden)
+
 
 class BERTModel(nn.Module):
     """
-    BERT 主模型: Embedding → [BERTBlock × L] → sequence_output + pooled_output
+    完整 BERT 模型（预训练版本）
+    
+    结构:
+        Input → [Embedding] → [Encoder x L] → [MLM Head + NSP Head]
     """
     def __init__(
         self,
@@ -967,301 +1144,246 @@ class BERTModel(nn.Module):
         # 嵌入层
         self.embedding = BERTEmbedding(vocab_size, d_model, max_len, dropout)
         
-        # Transformer 编码器层
-        self.layers = nn.ModuleList([
-            BERTBlock(d_model, num_heads, d_ff, dropout)
-            for _ in range(num_layers)
-        ])
+        # Transformer 编码器
+        self.encoder = BERTEncoder(d_model, num_heads, d_ff, num_layers, dropout)
         
-        # [CLS] 输出的池化层
-        self.pooler = nn.Sequential(
-            nn.Linear(d_model, d_model),
-            nn.Tanh()
-        )
-    
-    def forward(
-        self,
-        input_ids: torch.Tensor,        # (batch, seq_len)
-        segment_ids: torch.Tensor,       # (batch, seq_len)
-        attention_mask: Optional[torch.Tensor] = None  # (batch, seq_len)
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        返回:
-            sequence_output: (batch, seq_len, d_model) 所有位置的隐藏向量
-            pooled_output: (batch, d_model) [CLS] 位置的池化输出
-        """
-        # 构建 attention mask: (batch, seq_len) → (batch, 1, 1, seq_len)
-        if attention_mask is not None:
-            # 将 0/1 掩码转为 0/-1e9 的加性掩码
-            extended_mask = attention_mask.unsqueeze(1).unsqueeze(2)  # (batch, 1, 1, seq_len)
-            extended_mask = (1.0 - extended_mask.float()) * (-1e9)
-        else:
-            extended_mask = None
-        
-        # 嵌入
-        hidden_states = self.embedding(input_ids, segment_ids)
-        # hidden_states: (batch, seq_len, d_model)
-        
-        # 逐层 Transformer
-        all_attention_weights = []
-        for layer in self.layers:
-            hidden_states, attn_weights = layer(hidden_states, extended_mask)
-            all_attention_weights.append(attn_weights)
-        
-        # 序列输出
-        sequence_output = hidden_states  # (batch, seq_len, d_model)
-        
-        # 池化输出（取 [CLS] 位置）
-        pooled_output = self.pooler(sequence_output[:, 0])  # (batch, d_model)
-        
-        return sequence_output, pooled_output
-
-# =============================================
-# 6.2.5 MLM 预训练头
-# =============================================
-
-class MLMHead(nn.Module):
-    """MLM 预测头: h_t → Dense → GELU → LayerNorm → Linear(共享权重) → logits"""
-    def __init__(self, d_model: int, vocab_size: int):
-        super().__init__()
-        self.dense = nn.Linear(d_model, d_model)
-        self.activation = nn.GELU()
-        self.layer_norm = nn.LayerNorm(d_model, eps=1e-12)
-        
-        # 输出投影（可与 token embedding 共享权重）
-        self.decoder = nn.Linear(d_model, vocab_size, bias=True)
-    
-    def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
-        """
-        参数:
-            hidden_states: (batch, seq_len, d_model) 或 (num_masked, d_model)
-        返回:
-            logits: (..., vocab_size)
-        """
-        hidden = self.dense(hidden_states)
-        hidden = self.activation(hidden)
-        hidden = self.layer_norm(hidden)
-        logits = self.decoder(hidden)
-        return logits
-
-# =============================================
-# 6.2.6 NSP 预训练头
-# =============================================
-
-class NSPHead(nn.Module):
-    """NSP 头: h_[CLS] → Linear(2) → logits"""
-    def __init__(self, d_model: int):
-        super().__init__()
-        self.classifier = nn.Linear(d_model, 2)
-    
-    def forward(self, pooled_output: torch.Tensor) -> torch.Tensor:
-        """
-        参数:
-            pooled_output: (batch, d_model) — [CLS] 的池化输出
-        返回:
-            logits: (batch, 2)
-        """
-        return self.classifier(pooled_output)
-
-# =============================================
-# 6.2.7 完整 BERT 预训练模型
-# =============================================
-
-class BERTForPreTraining(nn.Module):
-    """完整 BERT 预训练模型 = BERT + MLM Head + NSP Head, L = L_MLM + L_NSP"""
-    def __init__(
-        self,
-        vocab_size: int = 30522,
-        d_model: int = 768,
-        num_heads: int = 12,
-        num_layers: int = 12,
-        d_ff: int = 3072,
-        max_len: int = 512,
-        dropout: float = 0.1
-    ):
-        super().__init__()
-        self.bert = BERTModel(vocab_size, d_model, num_heads, num_layers, d_ff, max_len, dropout)
+        # 预训练头
         self.mlm_head = MLMHead(d_model, vocab_size)
         self.nsp_head = NSPHead(d_model)
         
-        # 共享权重：MLM 输出层与 token embedding 共享
-        self.mlm_head.decoder.weight = self.bert.embedding.token_embedding.weight
+        # 参数初始化
+        self._init_weights()
+    
+    def _init_weights(self):
+        """
+        BERT 权重初始化：正态分布 N(0, 0.02)
+        """
+        for module in self.modules():
+            if isinstance(module, nn.Linear):
+                nn.init.normal_(module.weight, mean=0.0, std=0.02)
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+            elif isinstance(module, nn.Embedding):
+                nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            elif isinstance(module, nn.LayerNorm):
+                nn.init.ones_(module.weight)
+                nn.init.zeros_(module.bias)
     
     def forward(
         self,
-        input_ids: torch.Tensor,
-        segment_ids: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-        mlm_labels: Optional[torch.Tensor] = None,   # (batch, seq_len), -100 表示不计算损失
-        nsp_labels: Optional[torch.Tensor] = None     # (batch,), 0 或 1
+        token_ids: torch.Tensor,       # (batch, seq_len)
+        segment_ids: torch.Tensor,     # (batch, seq_len)
+        attention_mask: Optional[torch.Tensor] = None,  # (batch, seq_len)
+        masked_positions: Optional[torch.Tensor] = None  # (batch, num_masked)
     ) -> dict:
-        # BERT 编码
-        sequence_output, pooled_output = self.bert(input_ids, segment_ids, attention_mask)
+        """
+        参数:
+            token_ids: (batch, seq_len) 输入 token 索引
+            segment_ids: (batch, seq_len) 段落索引
+            attention_mask: (batch, seq_len) 1=有效位置, 0=padding
+            masked_positions: (batch, num_masked) 被掩码的位置索引
         
-        # MLM 预测
-        mlm_logits = self.mlm_head(sequence_output)  # (batch, seq_len, vocab_size)
+        返回:
+            字典包含:
+            - hidden_states: (batch, seq_len, d_model) 最终隐藏状态
+            - mlm_logits: (batch, num_masked, vocab_size) MLM 预测
+            - nsp_logits: (batch, 2) NSP 预测
+        """
+        # 1. 构造注意力掩码
+        if attention_mask is not None:
+            # (batch, seq_len) → (batch, 1, 1, seq_len) 用于广播
+            extended_mask = attention_mask.unsqueeze(1).unsqueeze(2)
+        else:
+            extended_mask = None
         
-        # NSP 预测
-        nsp_logits = self.nsp_head(pooled_output)  # (batch, 2)
+        # 2. 嵌入层
+        embeddings = self.embedding(token_ids, segment_ids)
+        # embeddings: (batch, seq_len, d_model)
         
-        result = {
+        # 3. 编码器
+        hidden_states, all_attn_weights = self.encoder(embeddings, extended_mask)
+        # hidden_states: (batch, seq_len, d_model)
+        
+        # 4. MLM 预测
+        if masked_positions is not None:
+            batch_size = hidden_states.size(0)
+            # 收集掩码位置的隐藏状态
+            # masked_positions: (batch, num_masked) → 用于 gather
+            num_masked = masked_positions.size(1)
+            masked_positions_expanded = masked_positions.unsqueeze(-1).expand(
+                -1, -1, self.d_model
+            )  # (batch, num_masked, d_model)
+            masked_hidden = torch.gather(
+                hidden_states, 1, masked_positions_expanded
+            )  # (batch, num_masked, d_model)
+            mlm_logits = self.mlm_head(masked_hidden)
+            # mlm_logits: (batch, num_masked, vocab_size)
+        else:
+            # 对所有位置预测（用于推理）
+            mlm_logits = self.mlm_head(hidden_states)
+        
+        # 5. NSP 预测
+        cls_hidden = hidden_states[:, 0, :]  # (batch, d_model)
+        nsp_logits = self.nsp_head(cls_hidden)
+        # nsp_logits: (batch, 2)
+        
+        return {
+            "hidden_states": hidden_states,
             "mlm_logits": mlm_logits,
             "nsp_logits": nsp_logits,
-            "sequence_output": sequence_output,
-            "pooled_output": pooled_output
+            "attention_weights": all_attn_weights,
         }
-        
-        # 计算损失
-        if mlm_labels is not None:
-            mlm_loss = F.cross_entropy(
-                mlm_logits.view(-1, mlm_logits.size(-1)),  # (batch*seq_len, vocab_size)
-                mlm_labels.view(-1),                        # (batch*seq_len,)
-                ignore_index=-100                           # 忽略非掩码位置
-            )
-            result["mlm_loss"] = mlm_loss
-        
-        if nsp_labels is not None:
-            nsp_loss = F.cross_entropy(nsp_logits, nsp_labels)
-            result["nsp_loss"] = nsp_loss
-        
-        if mlm_labels is not None and nsp_labels is not None:
-            result["total_loss"] = result["mlm_loss"] + result["nsp_loss"]
-        
-        return result
 
-# =============================================
-# 6.2.8 掩码生成工具
-# =============================================
 
-def create_mlm_masks(
-    input_ids: torch.Tensor,
-    vocab_size: int,
-    mask_token_id: int = 103,  # [MASK] 的 token ID
-    special_token_ids: set = None,
-    mlm_probability: float = 0.15
-) -> Tuple[torch.Tensor, torch.Tensor]:
+class BERTPretrainingLoss(nn.Module):
     """
-    创建 MLM 掩码和标签
-    
-    掩码策略:
-        - 15% 的 token 被选中
-        - 选中的 token: 80% → [MASK], 10% → 随机词, 10% → 保持不变
-    
-    参数:
-        input_ids: (batch, seq_len) 输入 token ID
-        vocab_size: 词表大小
-        mask_token_id: [MASK] token 的 ID
-        special_token_ids: 特殊 token ID 集合（不被掩码）
-        mlm_probability: 掩码概率 (默认 0.15)
-    
-    返回:
-        masked_input_ids: (batch, seq_len) 掩码后的输入
-        mlm_labels: (batch, seq_len) MLM 标签，-100 表示不计算损失
-    """
-    if special_token_ids is None:
-        special_token_ids = {0, 101, 102, 103}  # [PAD], [CLS], [SEP], [MASK]
-    
-    masked_input_ids = input_ids.clone()
-    mlm_labels = torch.full_like(input_ids, -100)  # -100 = 忽略
-    
-    # 生成掩码概率矩阵
-    probability_matrix = torch.full(input_ids.shape, mlm_probability)
-    
-    # 特殊 token 不掩码
-    for token_id in special_token_ids:
-        probability_matrix.masked_fill_(input_ids == token_id, value=0.0)
-    
-    # 采样掩码位置
-    masked_indices = torch.bernoulli(probability_matrix).bool()
-    
-    # 设置 MLM 标签（仅被掩码位置有真实标签）
-    mlm_labels[masked_indices] = input_ids[masked_indices]
-    
-    # 80% → [MASK]
-    indices_replaced = torch.bernoulli(torch.full(input_ids.shape, 0.8)).bool() & masked_indices
-    masked_input_ids[indices_replaced] = mask_token_id
-    
-    # 10% → 随机词（在剩余的掩码位置中，50% 随机替换）
-    indices_random = torch.bernoulli(torch.full(input_ids.shape, 0.5)).bool() & masked_indices & ~indices_replaced
-    random_words = torch.randint(vocab_size, input_ids.shape, dtype=input_ids.dtype)
-    masked_input_ids[indices_random] = random_words[indices_random]
-    
-    # 剩余 10% 保持不变（不需要额外操作）
-    
-    return masked_input_ids, mlm_labels
-
-# =============================================
-# 6.2.9 微调分类模型
-# =============================================
-
-class BERTForSequenceClassification(nn.Module):
-    """
-    BERT 序列分类微调模型
-    
-    结构:
-        Input → BERT → [CLS] pooled_output → Dropout → Linear → logits
+    BERT 预训练损失
     
     数学公式:
-        logits = W_cls · Tanh(W_pool · h_[CLS] + b_pool) + b_cls
+        L = L_MLM + L_NSP
+        L_MLM = -1/|M| * Σ log P(x_t | x̃)
+        L_NSP = -log P(y | A, B)
     """
-    def __init__(self, bert_model: BERTModel, num_classes: int, dropout: float = 0.1):
+    def __init__(self):
         super().__init__()
-        self.bert = bert_model
-        self.dropout = nn.Dropout(dropout)
-        self.classifier = nn.Linear(bert_model.d_model, num_classes)
+        self.mlm_loss_fn = nn.CrossEntropyLoss(reduction="mean")
+        self.nsp_loss_fn = nn.CrossEntropyLoss(reduction="mean")
     
     def forward(
         self,
-        input_ids: torch.Tensor,
-        segment_ids: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-        labels: Optional[torch.Tensor] = None
+        mlm_logits: torch.Tensor,     # (batch, num_masked, vocab_size)
+        mlm_labels: torch.Tensor,     # (batch, num_masked)
+        nsp_logits: torch.Tensor,     # (batch, 2)
+        nsp_labels: torch.Tensor      # (batch,)
     ) -> dict:
-        _, pooled_output = self.bert(input_ids, segment_ids, attention_mask)
-        pooled_output = self.dropout(pooled_output)
-        logits = self.classifier(pooled_output)  # (batch, num_classes)
+        """
+        返回:
+            字典包含:
+            - total_loss: 总损失
+            - mlm_loss: MLM 损失
+            - nsp_loss: NSP 损失
+        """
+        # MLM 损失
+        mlm_logits_flat = mlm_logits.view(-1, mlm_logits.size(-1))
+        mlm_labels_flat = mlm_labels.view(-1)
+        mlm_loss = self.mlm_loss_fn(mlm_logits_flat, mlm_labels_flat)
         
-        result = {"logits": logits}
+        # NSP 损失
+        nsp_loss = self.nsp_loss_fn(nsp_logits, nsp_labels)
         
-        if labels is not None:
-            loss = F.cross_entropy(logits, labels)
-            result["loss"] = loss
+        # 总损失
+        total_loss = mlm_loss + nsp_loss
         
-        return result
+        return {
+            "total_loss": total_loss,
+            "mlm_loss": mlm_loss,
+            "nsp_loss": nsp_loss,
+        }
 
-# =============================================
-# 6.2.10 使用示例与测试
-# =============================================
 
-def test_bert():
-    """测试 BERT 模型的前向传播"""
+def create_mlm_data(token_ids, vocab_size, mask_token_id=103,
+                    mask_prob=0.15, seed=None):
+    """
+    创建 MLM 训练数据（80/10/10 掩码策略）
+    
+    参数:
+        token_ids: (batch, seq_len) 原始 token 索引
+        vocab_size: 词表大小
+        mask_token_id: [MASK] 的 ID（默认 103）
+        mask_prob: 掩码比例（默认 15%）
+    返回:
+        masked_token_ids, masked_positions, masked_labels
+    """
+    if seed is not None:
+        torch.manual_seed(seed)
+    
+    batch_size, seq_len = token_ids.size()
+    special_tokens = {0, 101, 102}  # [PAD], [CLS], [SEP]
+    
+    all_positions, all_labels = [], []
+    masked_token_ids = token_ids.clone()
+    
+    for b in range(batch_size):
+        candidates = [i for i in range(seq_len)
+                      if token_ids[b, i].item() not in special_tokens]
+        num_to_mask = max(1, int(len(candidates) * mask_prob))
+        indices = sorted(np.random.choice(candidates, num_to_mask, replace=False).tolist())
+        
+        pos, lab = [], []
+        for idx in indices:
+            pos.append(idx)
+            lab.append(token_ids[b, idx].item())
+            r = np.random.random()
+            if r < 0.8:    masked_token_ids[b, idx] = mask_token_id    # 80%: [MASK]
+            elif r < 0.9:  masked_token_ids[b, idx] = np.random.randint(0, vocab_size)  # 10%: 随机
+            # 10%: 保持不变
+        all_positions.append(pos)
+        all_labels.append(lab)
+    
+    # 填充到相同长度
+    max_m = max(len(p) for p in all_positions)
+    padded_pos = torch.zeros(batch_size, max_m, dtype=torch.long)
+    padded_lab = torch.full((batch_size, max_m), -100, dtype=torch.long)
+    for b in range(batch_size):
+        n = len(all_positions[b])
+        padded_pos[b, :n] = torch.tensor(all_positions[b])
+        padded_lab[b, :n] = torch.tensor(all_labels[b])
+    
+    return masked_token_ids, padded_pos, padded_lab
+
+
+# ========== 完整测试 ==========
+if __name__ == "__main__":
+    import numpy as np
+    
+    # 缩小版超参数
     vocab_size, d_model, num_heads = 1000, 128, 4
     num_layers, d_ff, max_len = 2, 512, 64
     batch_size, seq_len = 4, 32
     
-    model = BERTForPreTraining(vocab_size, d_model, num_heads, num_layers, d_ff, max_len)
+    # 1. 创建模型
+    model = BERTModel(vocab_size, d_model, num_heads, num_layers, d_ff, max_len)
+    print(f"参数量: {sum(p.numel() for p in model.parameters()):,}")
     
-    # 模拟输入: [CLS] ... [SEP] ... [SEP] + padding
-    input_ids = torch.randint(4, vocab_size, (batch_size, seq_len))
-    input_ids[:, 0] = 101; input_ids[:, 15] = 102; input_ids[:, -1] = 102
+    # 2. 构造输入: [CLS] A... [SEP] B... [SEP]
+    token_ids = torch.randint(3, vocab_size, (batch_size, seq_len))
+    token_ids[:, 0], token_ids[:, 15], token_ids[:, -1] = 101, 102, 102
     segment_ids = torch.zeros(batch_size, seq_len, dtype=torch.long)
     segment_ids[:, 16:] = 1
     attention_mask = torch.ones(batch_size, seq_len, dtype=torch.long)
-    attention_mask[:, -3:] = 0
     
-    masked_input_ids, mlm_labels = create_mlm_masks(input_ids, vocab_size)
-    nsp_labels = torch.randint(0, 2, (batch_size,))
+    # 3. 创建 MLM 数据
+    masked_ids, masked_pos, masked_labels = create_mlm_data(
+        token_ids, vocab_size, mask_token_id=103, seed=42
+    )
     
+    # 4. 前向传播 + 损失计算
     model.eval()
     with torch.no_grad():
-        result = model(masked_input_ids, segment_ids, attention_mask, mlm_labels, nsp_labels)
+        out = model(masked_ids, segment_ids, attention_mask, masked_pos)
     
-    print(f"序列输出: {result['sequence_output'].shape}")  # (4, 32, 128)
-    print(f"MLM Loss: {result['mlm_loss']:.4f}, NSP Loss: {result['nsp_loss']:.4f}")
-    print(f"参数量: {sum(p.numel() for p in model.parameters()):,}")
-
-if __name__ == "__main__":
-    test_bert()
+    loss_fn = BERTPretrainingLoss()
+    nsp_labels = torch.randint(0, 2, (batch_size,))
+    losses = loss_fn(out["mlm_logits"], masked_labels, out["nsp_logits"], nsp_labels)
+    
+    print(f"MLM Loss: {losses['mlm_loss'].item():.4f}")
+    print(f"NSP Loss: {losses['nsp_loss'].item():.4f}")
+    print(f"Total:    {losses['total_loss'].item():.4f}")
+    
+    # 5. 验证双向注意力
+    attn = out["attention_weights"][0]  # 第 1 层
+    print(f"注意力行和: {attn[0, 0, 0].sum().item():.4f}")
+    print(f"非零比例:   {(attn[0, 0] > 1e-6).float().mean().item():.4f}")
+    
+    # 6. 训练一步
+    model.train()
+    opt = torch.optim.AdamW(model.parameters(), lr=2e-5, weight_decay=0.01)
+    out = model(masked_ids, segment_ids, attention_mask, masked_pos)
+    loss = loss_fn(out["mlm_logits"], masked_labels, out["nsp_logits"], nsp_labels)
+    loss["total_loss"].backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+    opt.step()
+    print(f"\n✅ BERT 模型测试通过！训练后 Loss: {loss['total_loss'].item():.4f}")
 ```
 
 ---
@@ -1272,177 +1394,254 @@ if __name__ == "__main__":
 
 ```python
 import matplotlib.pyplot as plt
+import numpy as np
 
-def visualize_attention(attn_weights, tokens, layer=0, head=0):
-    """可视化指定层/头的注意力权重热力图"""
-    attn = attn_weights[layer][0, head].detach().cpu().numpy()
-    fig, ax = plt.subplots(figsize=(8, 8))
-    ax.imshow(attn[:len(tokens), :len(tokens)], cmap='Blues')
-    ax.set_xticks(range(len(tokens))); ax.set_xticklabels(tokens, rotation=90)
-    ax.set_yticks(range(len(tokens))); ax.set_yticklabels(tokens)
-    ax.set_xlabel('Key'); ax.set_ylabel('Query')
-    plt.tight_layout(); plt.savefig('bert_attention_viz.png', dpi=150)
+def visualize_attention(attention_weights, tokens, layer=0, head=0):
+    """
+    可视化注意力权重热力图
+    
+    参数:
+        attention_weights: 各层注意力权重列表或单层张量
+        tokens: token 字符串列表
+        layer: 要可视化的层
+        head: 要可视化的注意力头
+    """
+    if isinstance(attention_weights, list):
+        attn = attention_weights[layer][0, head].detach().cpu().numpy()
+    else:
+        attn = attention_weights[0, head].detach().cpu().numpy()
+    
+    fig, ax = plt.subplots(figsize=(10, 10))
+    im = ax.imshow(attn, cmap="Blues", vmin=0, vmax=attn.max())
+    ax.set_xticks(range(len(tokens)))
+    ax.set_yticks(range(len(tokens)))
+    ax.set_xticklabels(tokens, rotation=45, ha="right", fontsize=9)
+    ax.set_yticklabels(tokens, fontsize=9)
+    ax.set_xlabel("Key (被关注的位置)")
+    ax.set_ylabel("Query (发起关注的位置)")
+    ax.set_title(f"BERT 注意力热力图 (Layer {layer}, Head {head})")
+    plt.colorbar(im)
+    plt.tight_layout()
+    plt.savefig("bert_attention_viz.png", dpi=150)
+    plt.show()
 ```
 
-**BERT 注意力的典型模式**：
+### 7.2 MLM 掩码策略分析
 
-| 模式 | 描述 | 出现位置 |
-|------|------|---------|
-| 对角线模式 | 每个词主要关注自己 | 低层 |
-| 垂直线模式 | 所有词关注 [CLS] 或 [SEP] | 中层 |
-| 宽泛关注 | 注意力分散在所有词上 | 高层 |
-| 语法模式 | 关注语法依赖的词 | 特定头 |
+**为什么 15% 而不是更高或更低？**
 
-### 7.2 微调最佳实践
+| 掩码比例 | 优点 | 缺点 |
+|---------|------|------|
+| 5% | 上下文信息丰富 | 训练信号太少，收敛慢 |
+| **15%** | **平衡训练信号和上下文** | **原论文选择** |
+| 30% | 训练信号多 | 上下文损失过多，预测困难 |
+| 50% | — | 接近噪声，模型难以学习 |
 
-**学习率选择**：
+**80/10/10 策略的数学分析**：
 
-| 任务类型 | 推荐学习率 | Batch Size |
-|---------|-----------|------------|
-| 文本分类 | 2e-5 ~ 5e-5 | 16 ~ 32 |
-| NER | 3e-5 ~ 5e-5 | 16 ~ 32 |
-| 问答 | 3e-5 | 12 ~ 32 |
-| 句子相似度 | 2e-5 ~ 3e-5 | 16 ~ 32 |
+设 $p_{\text{mask}} = 0.8$，$p_{\text{random}} = 0.1$，$p_{\text{keep}} = 0.1$。
 
-**微调关键代码**：
+对于一个被选中掩码的位置 $t$，其输入分布为：
 
-```python
-# AdamW: bias 和 LayerNorm 不加权重衰减
-no_decay = ['bias', 'LayerNorm.weight']
-optimizer = torch.optim.AdamW([
-    {'params': [p for n, p in model.named_parameters()
-               if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
-    {'params': [p for n, p in model.named_parameters()
-               if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
-], lr=2e-5)
+$$
+\tilde{x}_t = \begin{cases}
+\texttt{[MASK]} & \text{w.p. } 0.8 \\
+x_{\text{random}} \sim \text{Uniform}(V) & \text{w.p. } 0.1 \\
+x_t & \text{w.p. } 0.1
+\end{cases}
+$$
 
-# 训练循环（含 warmup + 线性衰减 + 梯度裁剪）
-for epoch in range(3):
-    for batch in dataloader:
-        loss = model(**batch)['loss']
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-        optimizer.step()
-        optimizer.zero_grad()
-```
+**期望信息增益**：
+
+模型需要在所有三种情况下都正确预测 $x_t$，这迫使模型学习**真正的上下文理解**，而不仅仅是记住"当看到 `[MASK]` 时需要预测"。
+
+### 7.3 微调实战技巧
+
+**技巧 1：逐层学习率衰减 (Layer-wise Learning Rate Decay)**
+
+越靠近输入的层，学习率越小：
+
+$$
+\eta_l = \eta_{\text{base}} \cdot \alpha^{L - l}
+$$
+
+其中 $L$ 是总层数，$l$ 是当前层（从 0 开始），$\alpha \in (0, 1)$ 是衰减因子（典型值 0.95）。
+
+**技巧 2：渐进式解冻 (Gradual Unfreezing)**
+
+1. 先冻结所有 BERT 层，只训练任务头（1-2 epochs）
+2. 从顶层开始逐层解冻
+3. 最后解冻所有层
+
+**技巧 3：常见微调超参数**
+
+| 任务类型 | 学习率 | Batch Size | Epochs | 说明 |
+|---------|--------|------------|--------|------|
+| 文本分类 | 2e-5 | 32 | 3 | GLUE 基准 |
+| NER | 3e-5 | 16 | 5 | 序列标注 |
+| QA | 3e-5 | 12 | 2 | SQuAD |
+| 相似度 | 2e-5 | 16 | 3 | STS-B |
 
 ---
 
 ## 8. 与其他模型的关系
 
-### 8.1 BERT vs GPT：编码器 vs 解码器
+### 8.1 BERT vs GPT：双向 vs 单向
 
 | 特性 | BERT | GPT |
 |------|------|-----|
+| **预训练方向** | 双向 (Bidirectional) | 单向 (Left-to-Right) |
 | **架构** | Transformer Encoder | Transformer Decoder |
-| **注意力方向** | 双向（全局） | 单向（因果掩码） |
-| **预训练目标** | MLM + NSP | 自回归 LM |
-| **掩码** | Padding mask | Causal mask + Padding mask |
-| **优势** | 理解任务（分类、NER） | 生成任务（文本生成） |
-| **代表性下游任务** | GLUE、SQuAD | 文本续写、对话 |
+| **预训练目标** | MLM + NSP | 自回归语言模型 |
+| **注意力掩码** | 全连接（无因果掩码） | 下三角（因果掩码） |
+| **擅长任务** | NLU（理解类） | NLG（生成类） |
+| **输入** | 完整句子 | 前缀序列 |
+| **输出** | 上下文表示 | 下一个 token |
 
-**数学对比**：
+**数学本质对比**：
 
-BERT 的目标函数：
+BERT 建模的是**联合概率的变体**：
 $$
-\mathcal{L}_{\text{BERT}} = -\sum_{t \in \mathcal{M}} \log P(x_t \mid x_1, \ldots, x_{t-1}, x_{t+1}, \ldots, x_n)
-$$
-
-GPT 的目标函数：
-$$
-\mathcal{L}_{\text{GPT}} = -\sum_{t=1}^n \log P(x_t \mid x_1, \ldots, x_{t-1})
+P_{\text{BERT}}(x_t \mid x_{\backslash t}) = \frac{P(x_1, \ldots, x_n)}{\sum_{x_t'} P(x_1, \ldots, x_t', \ldots, x_n)}
 $$
 
-**核心区别**：BERT 条件概率中包含**左右两侧**上下文，GPT 只包含**左侧**上下文。
+GPT 建模的是**条件概率的链式分解**：
+$$
+P_{\text{GPT}}(x_1, \ldots, x_n) = \prod_{t=1}^n P(x_t \mid x_1, \ldots, x_{t-1})
+$$
 
-### 8.2 BERT 的后继者们
+> **关键洞察**：BERT 不能直接用于文本生成（因为它不是自回归的），但在理解类任务上通常优于同等规模的 GPT。
+
+### 8.2 BERT 的后续发展
 
 ```
 BERT (2018)
-  ├── RoBERTa (2019): 去掉 NSP + 更多数据 + 更长训练
-  ├── ALBERT (2019): 参数共享 + 嵌入分解 → 更小模型
-  ├── DistilBERT (2019): 知识蒸馏 → 更快推理
-  ├── SpanBERT (2019): Span 掩码 → 更好的 span 预测
-  ├── ELECTRA (2020): 替换检测 → 更高效训练
-  └── DeBERTa (2020): 解耦注意力 → 更强性能
+  ├── RoBERTa (2019) ── 去掉 NSP，更多数据，更长训练
+  ├── ALBERT (2019) ── 参数共享，嵌入分解，减少参数
+  ├── DistilBERT (2019) ── 知识蒸馏，6层，保留97%性能
+  ├── SpanBERT (2019) ── 掩码连续 span，去掉 NSP
+  ├── ELECTRA (2020) ── 替换 token 检测（更高效的预训练）
+  └── DeBERTa (2020) ── 解耦注意力，增强掩码解码器
 ```
 
-**关键改进总结**：
+**各变体的关键改进**：
 
-| 模型 | 核心改进 | 效果 |
+| 模型 | 关键改进 | 效果 |
 |------|---------|------|
-| RoBERTa | 去掉 NSP，动态掩码，更大 batch | 所有任务显著提升 |
-| ALBERT | 跨层参数共享，嵌入矩阵分解 | 参数减少 80%，性能相当 |
-| ELECTRA | 替换 token 检测（非 MLM） | 相同计算量下效果更好 |
-| DeBERTa | 位置-内容解耦注意力 | SuperGLUE 超越人类 |
+| RoBERTa | 去掉 NSP，动态掩码，更大 batch | GLUE 上超过 BERT-Large |
+| ALBERT | 跨层参数共享 | 参数量减少 18x |
+| DistilBERT | 知识蒸馏到 6 层 | 速度快 60%，保留 97% 性能 |
+| ELECTRA | 判别式预训练 | 相同计算量下性能更好 |
+
+### 8.3 预训练范式总结
+
+$$
+\boxed{
+\text{预训练 (大规模无标注数据)} \xrightarrow{\text{迁移}} \text{微调 (少量标注数据)}
+}
+$$
+
+BERT 确立了 NLP 领域的 **"预训练 + 微调"** 范式：
+
+1. **阶段 1**：在大规模无标注语料上预训练，学习通用语言知识
+2. **阶段 2**：在特定任务的少量标注数据上微调，适应具体任务
+
+这一范式的优势：
+
+| 优势 | 说明 |
+|------|------|
+| **数据效率** | 微调只需少量标注数据 |
+| **通用性** | 一个预训练模型适用于多种任务 |
+| **性能** | 在 11 项 NLP 任务上创造 SOTA |
+| **易用性** | 微调只需添加一个简单的分类层 |
 
 ---
 
 ## 扩展阅读与实现
 
-### 9.1 Whole Word Masking 的数学分析
+### 问题 1：为什么 BERT 使用 WordPiece 而不是字级别或词级别 tokenization？
 
-**问题**：标准 MLM 掩码 WordPiece 子词可能导致泄露。
+**解答**：
 
-例如，"playing" 被分为 "play" + "##ing"，如果只掩码 "##ing"：
-- 模型可以从 "play" 轻松推断出 "##ing"
-- 训练信号变得过于简单
+WordPiece 是一种**子词 (subword)** 分词方法，平衡了词级别和字级别的优缺点：
 
-**Whole Word Masking**：如果一个词的某个子词被选中，该词的**所有子词**都被掩码。
+| 方法 | 词表大小 | OOV 问题 | 语义粒度 |
+|------|---------|---------|---------|
+| 字级别 | ~100 | 无 OOV | 太细，序列太长 |
+| 词级别 | ~100K+ | 严重 OOV | 合适 |
+| **WordPiece** | **~30K** | **极少 OOV** | **平衡** |
+
+WordPiece 的核心思想：从字符开始，逐步合并最频繁的字符对：
+
+```
+"unhappiness" → ["un", "##happy", "##ness"]
+"playing"     → ["play", "##ing"]
+```
+
+前缀 `##` 表示该子词不是一个词的开头。
+
+### 问题 2：BERT 的 `[CLS]` token 为什么能用于分类？
+
+**解答**：
+
+`[CLS]` 是一个特殊的 token，放在每个输入序列的开头。由于 BERT 是双向的，经过 $L$ 层 Transformer 后，`[CLS]` 的隐藏状态聚合了整个序列的信息：
 
 $$
-\text{如果 } x_t \in \text{word}_k \text{ 被选中掩码} \Rightarrow \forall x_j \in \text{word}_k, \; x_j \text{ 也被掩码}
+h_{\texttt{[CLS]}}^{(L)} = f\left(\text{全序列信息通过 } L \text{ 层注意力聚合}\right)
 $$
 
-**效果**：迫使模型学习更深层的语义理解，而非简单的子词拼接。
+在预训练阶段，NSP 任务强迫 `[CLS]` 学习句子级别的语义表示。
 
-> **Q:** Whole Word Masking 会改变掩码比例吗？
->
-> **A:** 会略有变化。由于以整词为单位掩码，实际掩码的 token 比例可能略高于 15%（因为一个词可能包含多个子词）。实现中通常通过调整采样概率来保持总掩码比例接近 15%。
+在微调阶段，我们在 `[CLS]` 的输出上添加分类层：
 
-### 9.2 为什么 NSP 后来被质疑？
-
-**RoBERTa 的实验发现**：
-
-| 设置 | MNLI | SST-2 | SQuAD |
-|------|------|-------|-------|
-| BERT (MLM + NSP) | 84.6 | 93.0 | 88.5 |
-| 去掉 NSP (仅 MLM) | **85.2** | **93.5** | **89.0** |
-
-**可能的原因**：
-
-1. **任务过于简单**：随机采样的负例与正例差异太大，模型可以通过主题匹配（而非逻辑推理）轻松区分
-2. **损失冲突**：NSP 损失可能与 MLM 损失产生梯度冲突，干扰语言理解的学习
-3. **数据构造偏差**：负例来自不同文档，模型学到的是"主题一致性"而非"句间逻辑"
-
-**数学分析**：
-
-理想的 NSP 应该学习：
 $$
-P(\text{IsNext} \mid A, B) \propto P(B \mid A) \quad \text{（条件概率：给定 A，B 的可能性）}
+P(y \mid x) = \text{softmax}(W \cdot h_{\texttt{[CLS]}}^{(L)} + b)
 $$
 
-但实际学到的可能是：
-$$
-P(\text{IsNext} \mid A, B) \propto \text{sim}(\text{topic}(A), \text{topic}(B)) \quad \text{（主题相似度）}
-$$
+### 问题 3：RoBERTa 为什么去掉了 NSP？
 
-### 9.3 BERT 的参数效率分析
+**解答**：
 
-**BERT-Base 参数分布**：
+RoBERTa (Liu et al., 2019) 通过消融实验发现：
 
-| 组件 | 参数量 | 占比 |
-|------|--------|------|
-| Token Embedding ($|V| \times d$) | $30522 \times 768 = 23.4\text{M}$ | 21.3% |
-| Position Embedding ($512 \times d$) | $512 \times 768 = 0.4\text{M}$ | 0.4% |
-| Segment Embedding ($2 \times d$) | $2 \times 768 = 0.002\text{M}$ | ~0% |
-| Self-Attention ($4d^2 \times L$) | $4 \times 768^2 \times 12 = 28.3\text{M}$ | 25.7% |
-| FFN ($2 \times d \times d_{ff} \times L$) | $2 \times 768 \times 3072 \times 12 = 56.6\text{M}$ | 51.5% |
-| LayerNorm + bias | ~$0.1\text{M}$ | ~0.1% |
-| Pooler | $768^2 = 0.6\text{M}$ | 0.5% |
-| **总计** | **~110M** | **100%** |
+1. **NSP 对大多数下游任务没有帮助**，甚至在某些任务上有害
+2. NSP 的负样本（随机配对的句子）太容易区分，模型主要通过**主题差异**而非**语义连贯性**来判断
+3. 去掉 NSP 后，可以用更长的文本段进行训练，增加上下文信息
 
-> **关键发现**：FFN 占据了超过一半的参数，这也是后续 ALBERT 通过参数共享主要节省参数的来源。
+RoBERTa 的改进总结：
+
+| 改进 | BERT | RoBERTa |
+|------|------|---------|
+| NSP | ✅ 有 | ❌ 去掉 |
+| 掩码策略 | 静态（固定掩码） | 动态（每 epoch 重新掩码） |
+| 数据量 | 16GB | 160GB |
+| Batch Size | 256 | 8K |
+| 训练步数 | 1M | 500K |
+
+### 问题 4：BERT 能否用于文本生成？
+
+**解答**：
+
+BERT 本身**不能直接用于自回归文本生成**，因为：
+
+1. BERT 是双向的，生成时没有"未来"上下文可以参考
+2. BERT 的训练目标是 MLM（填空），不是序列生成
+
+但有一些变通方法：
+
+- **迭代式生成**：将所有位置标记为 `[MASK]`，然后逐步替换（如 MaskGAN）
+- **非自回归生成**：一次性预测所有位置（如 CMLM）
+
+不过，对于生成任务，GPT 系列或 T5（编码器-解码器）架构更合适。
+
+### 问题 5：BERT 的参数效率问题
+
+**解答**：
+
+BERT-Base 110M 参数中，嵌入层占 ~23.8M（21.6%），编码器占 ~85.1M（77.4%）。ALBERT 针对此提出：
+
+1. **嵌入分解**：$|V| \times d \to |V| \times e + e \times d$（$e=128$），嵌入参数从 23.4M 降至 4.0M
+2. **跨层参数共享**：编码器参数从 $L \times 7.1\text{M} = 85.2\text{M}$ 降至 $7.1\text{M}$
 
 ---
 
@@ -1451,32 +1650,32 @@ $$
 ### 经典论文
 
 1. Devlin, J., Chang, M.-W., Lee, K., & Toutanova, K. (2019). [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805). NAACL 2019.
-   - **贡献**：提出 MLM + NSP 预训练方法，开创"预训练 + 微调"范式
+   - **贡献**：提出 MLM + NSP 双目标预训练，确立预训练+微调范式
 
 2. Liu, Y., et al. (2019). [RoBERTa: A Robustly Optimized BERT Pretraining Approach](https://arxiv.org/abs/1907.11692). arXiv.
-   - **贡献**：证明去掉 NSP、增加训练数据和训练时间可显著提升 BERT
+   - **贡献**：证明去掉 NSP、增加数据和训练时间能显著提升性能
 
-3. Lan, Z., et al. (2019). [ALBERT: A Lite BERT for Self-supervised Learning of Language Representations](https://arxiv.org/abs/1909.11942). ICLR 2020.
-   - **贡献**：跨层参数共享和嵌入矩阵分解，大幅减少参数量
+3. Lan, Z., et al. (2020). [ALBERT: A Lite BERT for Self-supervised Learning of Language Representations](https://arxiv.org/abs/1909.11942). ICLR 2020.
+   - **贡献**：参数共享和嵌入分解，大幅减少参数量
 
 4. Clark, K., et al. (2020). [ELECTRA: Pre-training Text Encoders as Discriminators Rather Than Generators](https://arxiv.org/abs/2003.10555). ICLR 2020.
-   - **贡献**：用替换 token 检测替代 MLM，提升训练效率
+   - **贡献**：替换 token 检测目标，更高效的预训练
 
 ### 教材与书籍
 
-5. Jurafsky, D. & Martin, J.H. [Speech and Language Processing (3rd ed.)](https://web.stanford.edu/~jurafsky/slp3/). Stanford University.
-   - **章节**：第 11 章详细讲解 BERT 及其变体
+5. Jurafsky, D., & Martin, J. H. [Speech and Language Processing](https://web.stanford.edu/~jurafsky/slp3/). 3rd ed. (Draft).
+   - **章节**：第 11 章详细讲解 BERT 和 Transformer 预训练
 
 ### 在线资源与教程
 
-6. Alammar, J. [The Illustrated BERT](https://jalammar.github.io/illustrated-bert/).
-   - **内容**：直观可视化 BERT 的架构和预训练过程
+6. Alammar, J. [The Illustrated BERT, ELMo, and co.](https://jalammar.github.io/illustrated-bert/).
+   - **内容**：BERT 架构和预训练目标的直观图解
 
 7. Hugging Face. [BERT Documentation](https://huggingface.co/docs/transformers/model_doc/bert).
-   - **内容**：BERT 模型的工业级实现和使用教程
+   - **内容**：BERT 的工业级实现和使用指南
 
-8. [Stanford CS224N: NLP with Deep Learning](https://web.stanford.edu/class/cs224n/). Lecture 14-15.
-   - **内容**：BERT 及预训练模型的理论讲解
+8. Google Research. [BERT GitHub Repository](https://github.com/google-research/bert).
+   - **内容**：BERT 原始 TensorFlow 实现和预训练模型
 
 ---
 
@@ -1485,32 +1684,37 @@ $$
 | 符号 | 含义 | 维度/类型 |
 |------|------|----------|
 | $n$ | 输入序列长度 | 标量 |
-| $d$ / $d_{\text{model}}$ | 隐藏维度 | 标量，BERT-Base: 768 |
-| $d_k$ | 查询/键维度 | 标量，$d / h$ |
-| $d_{ff}$ | FFN 隐藏层维度 | 标量，BERT-Base: 3072 |
-| $h$ | 注意力头数 | 标量，BERT-Base: 12 |
+| $d$ | 隐藏维度（$d_{model}$） | 标量，BERT-Base: 768 |
+| $d_k$ | 每个注意力头的维度 | 标量，64 |
+| $d_{ff}$ | FFN 隐藏层维度 | 标量，3072 |
 | $L$ | Transformer 层数 | 标量，BERT-Base: 12 |
-| $\|V\|$ | 词表大小 | 标量，BERT: 30522 |
-| $L_{\max}$ | 最大序列长度 | 标量，BERT: 512 |
-| $\mathcal{M}$ | 被掩码位置的集合 | 集合 |
-| $p$ | MLM 掩码概率 | 标量，0.15 |
+| $A$ | 注意力头数 | 标量，BERT-Base: 12 |
+| $\|V\|$ | WordPiece 词表大小 | 标量，30,522 |
+| $L_{\max}$ | 最大序列长度 | 标量，512 |
+| $x_t$ | 位置 $t$ 的原始 token | 整数索引 |
+| $\tilde{x}$ | 掩码处理后的输入序列 | $(n,)$ |
+| $\mathcal{M}$ | 被掩码位置的集合 | 集合，$\|\mathcal{M}\| \approx 0.15n$ |
+| $h_t$ | 位置 $t$ 的隐藏状态 | $(d,)$ |
+| $h_{\texttt{[CLS]}}$ | `[CLS]` 位置的隐藏状态 | $(d,)$ |
 | $E_{\text{token}}$ | Token 嵌入矩阵 | $(\|V\|, d)$ |
-| $E_{\text{segment}}$ | Segment 嵌入矩阵 | $(2, d)$ |
-| $E_{\text{position}}$ | Position 嵌入矩阵 | $(L_{\max}, d)$ |
-| $h_t^{(l)}$ | 第 $l$ 层第 $t$ 位置的隐藏向量 | $(d,)$ |
-| $h_{\text{[CLS]}}^{(L)}$ | 最终层 [CLS] 的隐藏向量 | $(d,)$ |
-| $W_{\text{MLM}}$ | MLM 输出权重矩阵 | $(\|V\|, d)$ |
-| $W_{\text{NSP}}$ | NSP 分类权重矩阵 | $(2, d)$ |
-| $Q, K, V$ | 查询/键/值矩阵 | $(n, d_k)$ |
+| $E_{\text{segment}}$ | 段落嵌入矩阵 | $(2, d)$ |
+| $E_{\text{position}}$ | 位置嵌入矩阵 | $(L_{\max}, d)$ |
+| $W_{\text{MLM}}$ | MLM 输出投影矩阵 | $(\|V\|, d)$ |
+| $W_{\text{NSP}}$ | NSP 分类矩阵 | $(2, d)$ |
+| $Q, K, V$ | 查询、键、值矩阵 | $(n, d_k)$ |
 | $M$ | 注意力掩码矩阵 | $(n, n)$ |
 | $\mathcal{L}_{\text{MLM}}$ | MLM 损失值 | 标量 |
 | $\mathcal{L}_{\text{NSP}}$ | NSP 损失值 | 标量 |
-| $\mathcal{L}_{\text{pretrain}}$ | 预训练总损失值 | 标量 |
+| $\mathcal{L}_{\text{BERT}}$ | BERT 总预训练损失 | 标量 |
 | $\ell(\cdot, \cdot)$ | 交叉熵损失函数 | 函数 |
+| $\Phi(x)$ | 标准正态分布 CDF | 函数 |
 
-**典型配置示例**：
-- BERT-Base: $d = 768$, $h = 12$, $L = 12$, $d_{ff} = 3072$, 参数量 110M
-- BERT-Large: $d = 1024$, $h = 16$, $L = 24$, $d_{ff} = 4096$, 参数量 340M
+**典型维度示例（BERT-Base）：**
+- $d = 768$（隐藏维度）
+- $d_k = 64$（每头维度）
+- $d_{ff} = 3072$（FFN 维度）
+- $|V| = 30{,}522$（词表大小）
+- $L_{\max} = 512$（最大序列长度）
 
 ---
 

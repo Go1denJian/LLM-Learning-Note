@@ -80,11 +80,18 @@ LLM Learning Notes 的完整笔记索引与导航。
 
 ---
 
-### 08–15：待实现
+### 08：GPT-2 (Radford, 2019)
+
+| 文档 | 说明 | 难度 | 前置知识 |
+|------|------|:----:|----------|
+| [GPT2-Math-and-Implementation](./08-GPT2-Math-and-Implementation.md) | 因果Attention、Zero-shot生成、采样策略 | ⭐⭐⭐⭐⭐ | BERT/Transformer基础 |
+
+---
+
+### 09–15：待实现
 
 | 编号 | 论文 | 年份 | 状态 |
 |------|------|------|------|
-| 08 | GPT-2 (Radford, 2019) | 2019 | 待写 |
 | 09 | T5 (Raffel, 2019) | 2019 | 待写 |
 | 10 | GPT-3 (Brown, 2020) | 2020 | 待写 |
 | 11 | Switch Transformers (Fedus, 2021) | 2021 | 待写 |
