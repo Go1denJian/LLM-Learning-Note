@@ -13,7 +13,7 @@
 → 04 GloVe (2014) → 05 GRU/Seq2Seq (2014) → 06 Transformer (2017)
 → 07 BERT (2018) → 08 GPT-2 (2019) → 09 T5 (2019) → 10 GPT-3 (2020)
 → 11 Switch Transformer (2021) → 12 LoRA (2021) → 13 RLHF (2022)
-→ 14 LLaMA (2023) → ... → 15 DeepSeek-R1 (2024)
+→ 14 LLaMA (2023) → 15 DeepSeek-R1 (2025)
 ```
 
 ---
@@ -37,7 +37,7 @@
 | 12 | LoRA (Hu, 2021) | [LoRA-Math-and-Implementation](docs/12-LoRA-Math-and-Implementation.md) | ⭐⭐⭐⭐ | ✅ |
 | 13 | InstructGPT/RLHF (Ouyang, 2022) | [RLHF-Math-and-Implementation](docs/13-RLHF-Math-and-Implementation.md) | ⭐⭐⭐⭐⭐ | ✅ |
 | 14 | LLaMA (Touvron, 2023) | [LLaMA-Architecture-and-Implementation](docs/14-LLaMA-Architecture-and-Implementation.md) | ⭐⭐⭐⭐ | ✅ |
-| 15 | DeepSeek-R1 (DeepSeek, 2024) | — | ⭐⭐⭐⭐⭐ | 待写 |
+| 15 | DeepSeek-R1 (DeepSeek, 2025) | [DeepSeek-R1-GRPO](docs/15-DeepSeek-R1-GRPO.md) | ⭐⭐⭐⭐⭐ | ✅ |
 
 **特色**：每篇包含完整数学推导 + NumPy 从零实现 + PyTorch 验证
 
