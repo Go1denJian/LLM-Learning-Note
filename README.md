@@ -27,7 +27,7 @@
 | 04 | GloVe (Pennington, 2014) | [GloVe-Math-and-Implementation](docs/04-GloVe-Math-and-Implementation.md) | ⭐⭐⭐ | ✅ |
 | 05 | GRU (Cho, 2014) | [GRU-and-Seq2Seq](docs/05-GRU-and-Seq2Seq.md) | ⭐⭐⭐⭐ | ✅ |
 | 06 | Transformer (Vaswani, 2017) | [Transformer-Math-and-Implementation](docs/06-Transformer-Math-and-Implementation.md) | ⭐⭐⭐⭐⭐ | ✅ |
-| 07 | BERT (Devlin, 2018) | — | ⭐⭐⭐ | 待写 |
+| 07 | BERT (Devlin, 2018) | [BERT-Math-and-Implementation](docs/07-BERT-Math-and-Implementation.md) | ⭐⭐⭐⭐⭐ | ✅ |
 | 08 | GPT-2 (Radford, 2019) | — | ⭐⭐⭐ | 待写 |
 | 09 | T5 (Raffel, 2019) | — | ⭐⭐⭐⭐ | 待写 |
 | 10 | GPT-3 (Brown, 2020) | — | ⭐⭐⭐⭐ | 待写 |

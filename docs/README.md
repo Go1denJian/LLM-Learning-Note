@@ -72,11 +72,18 @@ LLM Learning Notes 的完整笔记索引与导航。
 
 ---
 
-### 07–15：待实现
+### 07：BERT (Devlin, 2018)
+
+| 文档 | 说明 | 难度 | 前置知识 |
+|------|------|:----:|----------|
+| [BERT-Math-and-Implementation](./07-BERT-Math-and-Implementation.md) | 双向编码、MLM、NSP预训练 | ⭐⭐⭐⭐⭐ | Transformer基础 |
+
+---
+
+### 08–15：待实现
 
 | 编号 | 论文 | 年份 | 状态 |
 |------|------|------|------|
-| 07 | BERT (Devlin, 2018) | 2018 | 待写 |
 | 08 | GPT-2 (Radford, 2019) | 2019 | 待写 |
 | 09 | T5 (Raffel, 2019) | 2019 | 待写 |
 | 10 | GPT-3 (Brown, 2020) | 2020 | 待写 |
